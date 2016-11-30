@@ -2,9 +2,18 @@
 ; (print hello hello+world hello:world (print "hello world" 'hello world))
 ; (func x (a b c))
 
-; (func add (x y)
-;  (x + y))
+(set f:(Function Int Int)
+    (lambda Int (x:Int)
+      (do Int (set y:Int (x + 5))
+              (y / 2))))
 
+(func (x)
+    (set y (x + 5))
+    (y / 2))
+
+; (set x:Int (if Int 1
+;                    (1 + 2)
+;                    (2 + 3)))
 
 ; (infixr 9 '+)
 ; (set add (x y -> x + y))

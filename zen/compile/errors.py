@@ -8,7 +8,7 @@ from zen.errors import ZenError
 # Base class for all compiler errors 
 class CompileError(ZenError):
     def __str__(self):
-        return 'CompileError: {}'.format(self.detail)
+        return 'CompileError: {}'.format(self.message)
 
 
 # Error for function call with the wrong number of arguments
@@ -19,7 +19,7 @@ class ArgumentError(CompileError):
     def __str__(self):
         if self.actual < self.min:
             return ('ArgumentError: ({} ...) requires at least {} arguments ' +
-                    '({} given)'.format(self.function, self.min, self.actual))
+                    '({} given)').format(self.function, self.min, self.actual)
         else:
             return ('ArgumentError: ({} ...) takes at most {} arguments ' +
-                    '({} given)'.format(self.function, self.max, self.actual))
+                    '({} given)').format(self.function, self.max, self.actual)

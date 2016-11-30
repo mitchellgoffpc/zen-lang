@@ -3,10 +3,21 @@ Defines the classes which make up the AST for the target language
 """
 
 
-# Type classes
+# Type constraints
 class TypeConstraint:
-    def __init__()
+    def __init__(self, contaner, source):
+        self.container, self.source = container, source
 
+class TypeNode:
+    def __init__(self, constraints=[]):
+        self.constraints = constraints
+
+
+
+# Types and type classes
+class TypeClass:
+    def __init__(self, parent):
+        self.parent = parent
 
 class Type:
     def __init__(self, typename):
@@ -49,6 +60,10 @@ types = [
 
 
 # Function classes
+class Node:
+    def __init__(self):
+        self.constraints = []
+
 class FunctionDeclaration:
     def __init__(self, type, name, args, body):
         self.type, self.name, self.args, self.body = type, name, args, body
