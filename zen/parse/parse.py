@@ -3,16 +3,15 @@ Transforms the given source code into an abstract syntax tree
 """
 
 from zen.ast import *
-from zen.lex import Lexer
-from zen.lex import TokenType
 from zen.errors import SyntaxError
+from zen.parse.lex import Lexer
+from zen.parse.lex import TokenType
 
 
 class Parser:
-    def __init__(self, source, options={}):
+    def __init__(self, source):
         self.lexer = Lexer(source)
         self.source = source
-        self.options = options
         self.prev_end = 0
         self.token = self.lexer.nextToken()
 
@@ -24,39 +23,38 @@ class Parser:
         return values # List(self, values=values)
 
 
+    def parseSymbol(self):
+        token = self.token
+        if token.value in ('true', 'false'):
+            return Boolean(self, value=(token.value == 'true'), advance=True)
+        elif token.value == 'nil':
+            return Nil(self, value=None, advance=True)
+        else:
+            return Symbol(self, value=token.value, advance=True)
+
+
     def parseList(self):
-        values = self.any(TokenType.PAREN_L, self.parseCellOrExpression, TokenType.PAREN_R)
+        values = self.any(TokenType.PAREN_L, self.parseExpression, TokenType.PAREN_R)
         return List(self, values=values)
 
+    def parseVector(self):
+        values = self.any(TokenType.BRACKET_L, self.parseExpression, TokenType.BRACKET_R)
+        return Vector(self, values=values)
 
-    def parseObject(self, isConst):
-        fields = self.sequence(lambda: not self.skip(TokenType.BRACE_R), self.parseObjectField)
-        return Object(self, fields=fields)
-
-
-    def parseCellOrExpression(self):
-        start = self.token.start
-        key = self.parseExpression()
-
-        if self.skip(TokenType.COLON):
-            return Cell(self, start=start, key=key, value=self.parseExpression())
-        else:
-            return key
-
-
-    def parseCell(self):
-        return Cell(self,
-            start = self.token.start,
-            key = self.parseExpression(),
-            value = self.expect(TokenType.COLON) and self.parseExpression())
+    def parseMap(self):
+        values = self.any(TokenType.BRACE_L, self.parseExpression, TokenType.BRACE_R)
+        return Map(self, values=values)
 
 
     def parseExpression(self):
         token = self.token
+
         if token.type is TokenType.PAREN_L:
             return self.parseList()
+        elif token.type is TokenType.BRACKET_L:
+            return self.parseVector()
         elif token.type is TokenType.BRACE_L:
-            return self.parseObject()
+            return self.parseMap()
         elif token.type is TokenType.INTEGER:
             return Integer(self, value=int(token.value), advance=True)
         elif token.type is TokenType.FLOAT:
@@ -69,16 +67,6 @@ class Parser:
             return self.parseSymbol()
 
         raise self.unexpected()
-
-
-    def parseSymbol(self):
-        token = self.token
-        if token.value in ('true', 'false'):
-            return Boolean(self, value=(token.value == 'true'), advance=True)
-        elif token.value == 'nil':
-            return Nil(self, value=None, advance=True)
-        else:
-            return Symbol(self, value=token.value, advance=True)
 
 
 

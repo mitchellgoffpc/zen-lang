@@ -1,26 +1,26 @@
 from zen.ast import *
+from zen.parse.lex import butterflies
+
+butterflies = [x for x in butterflies if x != '_']
 
 
-# Caseify transform
-def caseify(node, first=False):
+# resolveCase transform
+def resolveCase(node):
     if node.cls is Symbol:
-        return Symbol(None, value=recase(node.value, first), loc=node.loc)
+        return Symbol(None, value=recase(node.value))
     elif node.cls is List:
-        return List(None, values=[caseify(x, i == 0) for i, x in enumerate(node.values)])
+        return List(None, values=[resolveCase(x) for x in node.values])
     else:
         return node
 
 
 # Helper functions
-def recase(value, first):
+def recase(value):
     i = 0
 
     while i < len(value):
-        if value[i] == '-':
-            if first and i < len(value) - 1:
-                value = value[:i] + value[i+1].upper() + value[i+2:]
-            else:
-                value = value[:i] + '_' + value[i+1:]
+        if value[i] in butterflies:
+            value = value[:i] + '_' + value[i+1:]
             i = 0
         i += 1
 

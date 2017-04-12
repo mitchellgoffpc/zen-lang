@@ -1,37 +1,26 @@
-from zen.lex import Lexer, TokenType
-from zen.parse import Parser
-from zen.source import Source
-from zen.eval import eval
+from zen.parse.parse import Parser
+from zen.parse.source import Source
 
+from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
-from zen.transforms.macros import resolve_macros
-from zen.transforms.case import caseify
+from zen.transforms.case import resolveCase
+from zen.transforms.macros import resolveMacros
 
-from zen.ast import *
-from zen.compile.compile import *
-from zen.compile.environment import *
-from zen.compile.primitives import *
-from zen.compile.write import *
+from zen.compile.js.compile import *
+from zen.compile.js.environment import *
+from zen.compile.js.primitives import *
+from zen.compile.js.write import *
 
 
-with open('../code.zen', 'r') as code:
+with open('code.zen', 'r') as code:
     source = Source(code.read(), 'code')
     parser = Parser(source)
 
-env = GlobalEnvironment()
-env.include('printf', ['FUNC', 'NIL', 'STRING'])
+nodes = list(parser.parse())
+nodes = [resolveDecorators(node) for node in nodes]
+nodes = [resolveFixity(node) for node in nodes]
+nodes = [resolveCase(node) for node in nodes]
 
-nodes = []
-for ast in parser.parse():
-    node = resolveFixity(ast)
-    nodes += [node]
-
-main = compile(nodes, env)
-
-for line in env.write():
-    print line
-
-print writeFunction(main)
-
-# cased_ast = caseify(ast)
-# macro_ast = resolve_macros(infix_ast)
+main = compile(nodes)
+for item in main:
+    print item

@@ -1,5 +1,5 @@
-from ..ast import *
-from ..errors import SyntaxError
+from zen.ast import *
+from zen.errors import SyntaxError
 
 
 # Macros
@@ -9,7 +9,7 @@ macros = {
 
 
 # Macro resolution transform
-def resolve_macros(node):
+def resolveMacros(node):
     if (node.cls is List and
         len(node.values) > 0 and
         node.values[0].cls is Symbol and

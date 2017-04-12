@@ -2,11 +2,15 @@
 Transforms the given source code into a list of tokens
 """
 
+from zen.parse.source import Source
+
 
 # Operator list:
 operators = (
-    '!', '#', '$', '%', '&', '*', '+', ',', '-', '.', '/', ':', ';',
-    '<', '=', '>', '?', '@', '^', '|', '~', '\'')
+    ';', '$', '%', '&', '*', '+', '-', '/', '<', '=', '>',
+    '.', ':', ',', "'",  '!', '?', '@', '^', '|', '~')
+
+butterflies = ('_', '+', '-', '*', '/', '?')
 
 
 # TokenType enum
@@ -23,7 +27,6 @@ class TokenType:
     FLOAT = 'Float'
     STRING = 'String'
     OPERATOR = 'Operator'
-    COLON = 'Colon'
 
 
 # Token class
@@ -35,19 +38,22 @@ class Token:
         self.value = value
 
     def __repr__(self):
-        return "<Token: {}, {}>".format(self.type, self.value)
+        if self.value is None:
+            return "<Token: {}>".format(self.type)
+        else:
+            return "<Token: {}, {}>".format(self.type, self.value)
 
 
 # Lexer class
-class Lexer:
+class Lexer(Source):
     def __init__(self, source):
-        self.source = source
+        super(Lexer, self).__init__(source.body, source.name)
         self.prev_position = 0
 
     def nextToken(self, reset_position=None):
         if reset_position is None:
             reset_position = self.prev_position
-        token = readToken(self.source, reset_position)
+        token = readToken(self, reset_position)
         self.prev_position = token.end
         return token
 
@@ -78,26 +84,14 @@ def readToken(source, from_position):
     if char == '{': return Token(TokenType.BRACE_L, position, position + 1)
     if char == '}': return Token(TokenType.BRACE_R, position, position + 1)
 
-    raise SyntaxError(source.body, position, "Unexpected character: " + ord(code))
+    raise SyntaxError(source.body, position, "Unexpected character: {}".format(char))
 
 
 
 def positionAfterWhitespace(source, position):
-    while position < source.length:
-        # Skip whitespace, newlines and commas
-        if source.charCodeAt(position) in (0x0009, 0x0020, 0x000A, 0x000D):
-            position += 1
-        
-        # Skip comments
-        elif source.charAt(position) == ';':
-            position += 1
-            while position < source.length:
-                code = source.charCodeAt(position)
-                if (code > 0x1F or code == 0x9) and code not in (0x000A, 0x000D):
-                    position += 1
-                else: break
-        
-        else: break
+    while position < source.length and \
+          source.charCodeAt(position) in (0x0009, 0x0020, 0x000A, 0x000D):
+        position += 1
 
     return position
 
@@ -141,7 +135,7 @@ def readNumber(source, start):
 def readDigits(source, position):
     if not source.charAt(position).isdigit():
         raise SyntaxError(source.body, position, 'Invalid number, expected digit but got: ' + ord(char))
-        
+
     while source.charAt(position).isdigit():
         position += 1
     return position
@@ -156,7 +150,7 @@ def readString(source, start):
     while position < source.length:
         code = source.charCodeAt(position)
         char = chr(code)
-        
+
         if code == 0xA or code == 0xD or char == '"':
             break
         if code < 0x20 and code != 0x9:
@@ -200,11 +194,12 @@ def readName(source, start):
     position = start + 1
     while position < source.length:
         char = source.charAt(position)
-        if char in ('_', '+', '-', '*', '/') or char.isalnum():
+        if char in butterflies or char.isalnum():
             position += 1
         else: break
 
     return Token(TokenType.NAME, start, position, source.body[start:position])
+
 
 
 
@@ -217,10 +212,7 @@ def readOperator(source, start):
             position += 1
         else: break
 
-    if source.body[start:position] == ':':
-        return Token(TokenType.COLON, start, position, source.body[start:position])
-    else:
-        return Token(TokenType.OPERATOR, start, position, source.body[start:position])
+    return Token(TokenType.OPERATOR, start, position, source.body[start:position])
 
 
 

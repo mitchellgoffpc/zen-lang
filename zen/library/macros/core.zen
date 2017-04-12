@@ -1,0 +1,2 @@
+(def-macro def (f args body)
+    `(var ~f (lambda ~args ~body)))

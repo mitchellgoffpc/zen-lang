@@ -2,10 +2,13 @@
 Provides a class to hold the source code.
 """
 
-class Source:
+class Source(object):
     def __init__(self, body, name):
-        self.body = body
         self.name = name
+        self.update(body)
+
+    def update(self, body):
+        self.body = body
         self.length = len(body)
 
     def charCodeAt(self, index):

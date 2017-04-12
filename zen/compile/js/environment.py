@@ -2,7 +2,8 @@
 Provides an environment class for the compiler
 """
 
-from zen.compile.errors import *
+import zen.compile.js.ast as js
+from zen.compile.js.errors import *
 
 sym_id = 0
 
@@ -10,16 +11,16 @@ sym_id = 0
 # Environment base class
 class Environment(object):
     def __init__(self):
-        self.symbols = {}
+        self.symbols = []
 
     def __str__(self):
         return str(self.symbols)
 
-    def create(self, symbol, type):
-        if self.symbols.get(symbol, type) != type:
+    def create(self, symbol):
+        if symbol in self.symbols:
             raise CompileError('Symbol `{}` is already defined'.format(symbol))
         else:
-            self.symbols[symbol] = type
+            self.symbols.append(symbol)
 
     def gen(self):
         global sym_id
@@ -32,14 +33,15 @@ class Environment(object):
 class GlobalEnvironment(Environment):
     def __init__(self):
         super(GlobalEnvironment, self).__init__()
+        self.symbols += ['print']
         self.assignments = {}
         self.imports = {}
 
-    def assign(self, symbol, type, value):
+    def assign(self, symbol, value):
         self.create(symbol, type)
         self.assignments[symbol] = value
 
-    def include(self, symbol, type):
+    def include(self, symbol):
         if self.imports.get(symbol, type) != type:
             raise CompileError('Symbol `{}` is already defined in an imported file'.format(symbol))
         else:
@@ -47,7 +49,7 @@ class GlobalEnvironment(Environment):
 
     def find(self, symbol):
         if symbol in self.symbols:
-            return self.symbols[symbol]
+            return js.Symbol(value=symbol)
         elif symbol in self.imports:
             return self.imports[symbol]
         else:
@@ -56,62 +58,32 @@ class GlobalEnvironment(Environment):
     def outermost(self):
         return self
 
-    def write(self):
-        return [ self._write(symbol, type)
-                 for symbol, type
-                 in self.symbols.items() ]
-
-    def _write(self, symbol, type):
-        from zen.compile.write import (
-            writeType,
-            writeFunction,
-            writeExpression)
-
-        if symbol not in self.assignments:
-            return '{} {};'.format(type, symbol)
-        elif type[0] == 'FUNC':
-            return writeFunction(self.assignments[symbol])
-        else:
-            return '{} {} = {};'.format(
-                writeType(type),
-                symbol,
-                writeExpression(self.assignments[symbol]))
-
 
 
 # Function environment
 class FunctionEnvironment(Environment):
-    def __init__(self, outer, args={}):
+    def __init__(self, outer, args=[]):
         super(FunctionEnvironment, self).__init__()
         self.outer = outer
         self.args = args
 
-    def create(self, symbol, type):
-        if self.args.get(symbol, type) != type:
+    def create(self, symbol):
+        if symbol in self.args:
             raise CompileError('Symbol `{}` is already defined'.format(symbol))
         else:
-            return super(FunctionEnvironment, self).create(symbol, type)
+            return super(FunctionEnvironment, self).create(symbol)
 
-    def create_arg(self, symbol, type):
-        if self.args.get(symbol, type) != type:
+    def create_arg(self, symbol):
+        if symbol in self.args:
             raise CompileError('Argument `{}` is already defined'.format(symbol))
         else:
-            self.args[symbol] = type
+            self.args.append(symbol)
 
     def find(self, symbol):
-        if symbol in self.symbols:
-            return self.symbols[symbol]
-        elif symbol in self.args:
-            return self.args[symbol]
+        if symbol in self.symbols or symbol in self.args:
+            return js.Symbol(value=symbol)
         else:
             return self.outer.find(symbol)
 
     def outermost(self):
         return self.outer.outermost()
-
-    def write(self):
-        from zen.compile.write import writeType
-
-        return [ '{} {};'.format(writeType(type), symbol)
-                 for symbol, type
-                 in self.symbols.items() ]
