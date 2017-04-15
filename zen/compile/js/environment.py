@@ -34,18 +34,19 @@ class GlobalEnvironment(Environment):
     def __init__(self):
         super(GlobalEnvironment, self).__init__()
         self.symbols += ['print']
+        self.imports = []
         self.assignments = {}
-        self.imports = {}
+        self.classes = {}
 
     def assign(self, symbol, value):
         self.create(symbol, type)
         self.assignments[symbol] = value
 
-    def include(self, symbol):
-        if self.imports.get(symbol, type) != type:
-            raise CompileError('Symbol `{}` is already defined in an imported file'.format(symbol))
-        else:
-            self.imports[symbol] = type
+    def createImport(self, target, path, alias=None):
+        self.imports.append({'target': target, 'path': path, 'alias': alias})
+
+    def createClass(self, env, name, methods):
+        self.classes[name] = (env, methods)
 
     def find(self, symbol):
         if symbol in self.symbols:
@@ -57,6 +58,30 @@ class GlobalEnvironment(Environment):
 
     def outermost(self):
         return self
+
+
+    # Writers
+    def write(self, indent=0):
+        lines = []
+
+        for x in self.imports:
+            lines.append(self.compileImport(x))
+
+        for cls in self.classes:
+            lines.append(js.Null())
+
+        return '\n'.join(x.write(indent=indent) for x in lines)
+
+    def compileImport(self, obj):
+        name = obj['alias'] or obj['target']
+        path = '.'.join(obj['path'])
+
+        return js.Operator(
+            op = '=',
+            left = js.Symbol(value=name),
+            right = js.Call(
+                f = js.Symbol(value='require'),
+                args = [js.String(value=path)]))
 
 
 
@@ -87,3 +112,22 @@ class FunctionEnvironment(Environment):
 
     def outermost(self):
         return self.outer.outermost()
+
+
+
+# Class environment
+class ClassEnvironment(Environment):
+    def __init__(self, outer):
+        super(ClassEnvironment, self).__init__()
+        self.outer = outer
+        self.properties = {}
+        self.methods = {}
+
+
+# Method environment
+class MethodEnvironment(FunctionEnvironment):
+    def find(self, symbol):
+        if symbol == 'self':
+            return js.Symbol('this')
+        else:
+            return super(MethodEnvironment, self).find(symbol)

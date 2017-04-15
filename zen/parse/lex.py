@@ -46,8 +46,8 @@ class Token:
 
 # Lexer class
 class Lexer(Source):
-    def __init__(self, source):
-        super(Lexer, self).__init__(source.body, source.name)
+    def __init__(self, body):
+        super(Lexer, self).__init__(body)
         self.prev_position = 0
 
     def nextToken(self, reset_position=None):
@@ -89,8 +89,8 @@ def readToken(source, from_position):
 
 
 def positionAfterWhitespace(source, position):
-    while position < source.length and \
-          source.charCodeAt(position) in (0x0009, 0x0020, 0x000A, 0x000D):
+    while (position < source.length and
+           source.charCodeAt(position) in (0x0009, 0x0020, 0x000A, 0x000D)):
         position += 1
 
     return position
@@ -207,12 +207,30 @@ def readOperator(source, start):
     position = start
     char = source.charAt(position)
 
-    while position < source.length:
-        if source.charAt(position) in operators:
+    if char != ';':
+        while (position < source.length and
+               source.charAt(position) in operators):
             position += 1
-        else: break
 
-    return Token(TokenType.OPERATOR, start, position, source.body[start:position])
+        return Token(TokenType.OPERATOR, start, position, source.body[start:position])
+
+    # Handle comments
+    else:
+        while (position < source.length and
+               source.charAt(position) == ';'):
+            position += 1
+
+        level = position - start
+        position = positionAfterWhitespace(source, position)
+        beginning = position
+
+        while (position < source.length and
+               source.charAt(position) != '\n'):
+            position += 1
+
+        comment = '(comment :level {} "{}")'.format(level, source.body[beginning:position])
+        source.update(source.body[:start] + comment + source.body[position:])
+        return source.nextToken(reset_position=start)
 
 
 

@@ -30,8 +30,11 @@ class Symbol(Node): pass
 class Operator(Node): pass
 class Integer(Node): pass
 class Float(Node): pass
-class String(Node): pass
 class Boolean(Node): pass
+
+class String(Node):
+    def __str__(self):
+        return '"{}"'.format(self.value)
 
 class List(Node):
     fstr = '({})'

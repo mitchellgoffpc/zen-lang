@@ -13,14 +13,17 @@ from zen.compile.js.write import *
 
 
 with open('code.zen', 'r') as code:
-    source = Source(code.read(), 'code')
+    source = code.read()
     parser = Parser(source)
 
-nodes = list(parser.parse())
-nodes = [resolveDecorators(node) for node in nodes]
-nodes = [resolveFixity(node) for node in nodes]
+nodes = parser.parse()
+nodes = [resolveDecorators(x) for x in nodes]
+nodes = [resolveFixity(x) for x in nodes]
+nodes = filter(None, [resolveMacros(x) for x in nodes])
 nodes = [resolveCase(node) for node in nodes]
 
-main = compile(nodes)
+main, env = compile(nodes)
+print env.write()
+
 for item in main:
-    print item
+    print item.write()

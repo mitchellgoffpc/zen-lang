@@ -3,17 +3,16 @@ Transforms the given source code into an abstract syntax tree
 """
 
 from zen.ast import *
-from zen.errors import SyntaxError
+from zen.parse.errors import SyntaxError
 from zen.parse.lex import Lexer
 from zen.parse.lex import TokenType
 
 
 class Parser:
     def __init__(self, source):
-        self.lexer = Lexer(source)
-        self.source = source
+        self.source = Lexer(source)
         self.prev_end = 0
-        self.token = self.lexer.nextToken()
+        self.token = self.source.nextToken()
 
 
     # Parsers
@@ -73,7 +72,7 @@ class Parser:
     # Token checkers
     def advance(self):
         self.prev_end = self.token.end
-        self.token = self.lexer.nextToken(self.prev_end)
+        self.token = self.source.nextToken(self.prev_end)
 
     def peek(self, type):
         return self.token.type is type

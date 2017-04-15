@@ -9,7 +9,7 @@ def compile(nodes):
     code = [ compileExpression(node, env) for node in nodes ]
     code = [ x for e, c in code for x in c + [e] ]
 
-    return code
+    return [x for x in code if x.cls != js.Null], env
 
 
 # Compile an expression

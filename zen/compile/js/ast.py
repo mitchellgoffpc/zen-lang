@@ -40,8 +40,8 @@ class Array(Node):
 
 class Object(Node):
     def write(self, indent=0):
-        return '{{ {} }}'.format(', '.join(
-            '{}: {}'.format(k, v)
+        return '{{{}}}'.format(', '.join(
+            '{}: {}'.format(k.write(indent), v.write(indent))
             for k, v in self.values))
 
 
