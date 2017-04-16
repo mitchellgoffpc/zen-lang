@@ -1,3 +1,6 @@
+(import constants.flux-cart-constants.Constants :as Flux-Cart-Constants)
+(import App-Dispatcher :from dispatcher.app-dispatcher)
+
 (def my-function (x)
     (var m {:hello "world"
             :foo "bar"})
@@ -5,13 +8,10 @@
     (print m x)
     (is-empty? x))
 
-(import constants.flux-cart-constants :as Flux-Cart-Constants)
-(import App-Dispatcher :from dispatcher.app-dispatcher)
-
 ;; Define action methods
 (class Flux-Cart-Actions
     ;; Receive initial product data
-    (def (:receiveProduct data)
+    (def (:receive-product data)
         (App-Dispatcher :handle-action
           { :action-type Flux-Cart-Constants.RECEIVE-DATA
             :data data }))

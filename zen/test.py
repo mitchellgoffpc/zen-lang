@@ -22,8 +22,7 @@ nodes = [resolveFixity(x) for x in nodes]
 nodes = filter(None, [resolveMacros(x) for x in nodes])
 nodes = [resolveCase(node) for node in nodes]
 
-main, env = compile(nodes)
-print env.write()
+main = compile(nodes)
 
 for item in main:
     print item.write()

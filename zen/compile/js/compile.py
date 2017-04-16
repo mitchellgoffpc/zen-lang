@@ -1,15 +1,18 @@
 import zen.ast as ast
 import zen.compile.js.ast as js
+
 from zen.compile.js.environment import *
+from zen.compile.js.util import *
 
 
 # Compile
 def compile(nodes):
-    env = GlobalEnvironment()
-    code = [ compileExpression(node, env) for node in nodes ]
-    code = [ x for e, c in code for x in c + [e] ]
+    env = RootEnvironment()
+    code = [compileExpression(node, env) for node in nodes]
+    code = [x for e, c in code for x in c + [e]]
+    code = env.compile() + code
 
-    return [x for x in code if x.cls != js.Null], env
+    return [x for x in code if x.cls != js.Null]
 
 
 # Compile an expression
@@ -20,11 +23,11 @@ def compileExpression(node, env):
         env.find(node.value)
         return js.Symbol(value=node.value), []
     elif node.cls is ast.Integer:
-        return js.Integer(value=node.value), []
+        return JSObject('int', js.Integer(value=node.value)), []
     elif node.cls is ast.Float:
-        return js.Float(value=node.value), []
+        return JSObject('float', js.Float(value=node.value)), []
     elif node.cls is ast.String:
-        return js.String(value=node.value), []
+        return JSObject('string', js.String(value=node.value)), []
     else:
         raise CompileError('Unexpected node - {}'.format(node))
 
@@ -66,4 +69,4 @@ def compileFunctionCall(node, env):
     code = [x for _, c in a for x in c]
 
     # If everything checks out, compile into a function call
-    return js.Call(f=f, args=args), code
+    return js.Call(f=js.Symbol(value='__dispatch'), args=[f] + args), code

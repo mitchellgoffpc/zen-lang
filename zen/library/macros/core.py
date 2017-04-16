@@ -15,10 +15,7 @@ def defFunction(name, args, *body):
     return List(None, values=[
         Symbol(None, value='var'),
         name,
-        List(None, values=[
-            Symbol(None, value='lambda'),
-            args,
-            List(None, values=[Symbol(None, value='do')] + list(body))])])
+        List(None, values=[Symbol(None, value='lambda'), args] + list(body))])
 
 
 def defClass(name, *args):
@@ -83,10 +80,10 @@ def unwind(node):
            len(node.values) == 3 and
            node.values[0].cls is Operator and
            node.values[0].value is '.' and
-           node.values[1].cls is Symbol):
+           node.values[2].cls is Symbol):
 
-        result.append(node.values[1].value)
-        node = node.values[2]
+        result.append(node.values[2].value)
+        node = node.values[1]
 
     assert node.cls is Symbol
-    return result + [node.value]
+    return list(reversed([node.value] + result))

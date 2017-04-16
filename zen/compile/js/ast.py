@@ -47,13 +47,20 @@ class Object(Node):
 
 
 # Complex node types
+class Var(Node):
+    def write(self, indent=0):
+        return 'var {}'.format(self.value)
+
 class Return(Node):
     def write(self, indent=0):
         return 'return {}'.format(self.value.write(indent))
 
 class Call(Node):
     def write(self, indent=0):
-        return '{}({})'.format(self.f, ', '.join(x.write(indent) for x in self.args))
+        args = ', '.join(x.write(indent) for x in self.args)
+        fstr = '{}({})' if self.f.cls is Symbol else '({})({})'
+
+        return fstr.format(self.f.write(indent), args)
 
 class Operator(Node):
     def write(self, indent=0):
@@ -71,8 +78,7 @@ class Function(Node):
     def write(self, indent=0):
         tabs = ' ' * 4 * indent
         args = ', '.join(x.write(indent) for x in self.args)
-        body = (['var {}'.format(x) for x in self.env.symbols] +
-                [x.write(indent + 1) for x in self.body])
+        body = [x.write(indent + 1) for x in self.env.compile() + self.body]
 
         return 'function ({}) {{\n{}{}}}'.format(
             args,
