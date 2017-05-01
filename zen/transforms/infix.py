@@ -38,7 +38,8 @@ operators = {
 # a little weird, it makes the language significantly less clunky to write in.
 
 def resolveFixity(node):
-    if node.cls is not List:
+    if (node.cls is not List or
+        len(node.values) <= 1):
         return node
     assert node.values[-1].cls is not Operator
 

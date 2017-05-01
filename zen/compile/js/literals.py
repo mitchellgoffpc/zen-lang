@@ -7,11 +7,13 @@ from zen.compile.js.util import *
 from zen.library.macros.core import *
 
 
-# Literal compilers
+# Keyword compiler
 def compileKeyword(node, env):
     assert isKeyword(node)
-    return JSObject('keyword', js.String(value=node.values[1].value)), []
+    return JSObject('keyword', __value=js.String(value=node.values[1].value)), []
 
+
+# Map compiler
 def compileMap(node, env):
     i = 1
     cells = []
@@ -29,8 +31,10 @@ def compileMap(node, env):
         code += c
         i += 2
 
-    return JSObject('map', js.Object(values=cells)), code
+    return JSObject('map', __value=js.Object(values=cells)), code
 
+
+# Lambda compiler
 def compileLambda(node, env):
     if len(node.values) < 3:
         raise ArgumentError('lambda', len(node.values) - 1, 3, "...")
@@ -43,4 +47,4 @@ def compileLambda(node, env):
     body = code + [js.Return(value=retexpr)]
     args = [js.Symbol(value=arg) for arg in args.values]
 
-    return JSObject('function', js.Function(env=func_env, args=args, body=body)), []
+    return JSObject('function', __call=js.Function(env=func_env, args=args, body=body)), []

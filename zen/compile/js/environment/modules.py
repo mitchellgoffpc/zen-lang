@@ -8,20 +8,22 @@ from zen.compile.js.environment.classes import *
 
 
 # Root environment
-class RootEnvironment(Environment):
-    def __init__(self):
-        super(RootEnvironment, self).__init__()
-        self.symbols += ['print']
+class ModuleEnvironment(Environment):
+    gensym_id = 0
+
+    def __init__(self, module):
+        super(ModuleEnvironment, self).__init__()
+        self.module = module
         self.imports = {}
-        self.assignments = {}
+        self.macros = {}
         self.classes = {}
 
-    def assign(self, symbol, value):
-        self.create(symbol, type)
-        self.assignments[symbol] = value
-
     def createImport(self, target, path, alias=None):
-        self.imports[alias or target] = (path, target)
+        module = self.module.linker.getModule(path)
+        self.imports[alias or target] = (module, target)
+
+    def createMacro(self, name, function):
+        self.macros[name] = function
 
     def createClass(self, env, name, methods):
         self.classes[name] = (env, methods)
@@ -29,7 +31,8 @@ class RootEnvironment(Environment):
     def find(self, symbol):
         if (symbol in self.symbols or
             symbol in self.imports or
-            symbol in self.classes):
+            symbol in self.classes or
+            symbol in self.module.linker.prefix):
             return js.Symbol(value=symbol)
         else:
             raise CompileError('Symbol `{}` is undefined in the current environment'.format(symbol))
@@ -37,12 +40,18 @@ class RootEnvironment(Environment):
     def outermost(self):
         return self
 
+    def exports(self):
+        return self.symbols
 
 
     # Compile
     def compile(self):
-        return [self.compileImport(name, path, target)
-                for name, (path, target) in self.imports.items()]
+        return (
+            [js.Var(value=x) for x in self.symbols] +
+            [js.Var(value=x) for x in self.classes] +
+            [self.compileImport(name, path, target)
+                for name, (path, target)
+                in self.imports.items()])
 
 
     # Compile imports

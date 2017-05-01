@@ -17,8 +17,10 @@ def compileDo(node, env):
     code = [x for expr, code in exprs for x in code + [expr]]
 
     expr = code[-1]
-    code = [x for x in code[:-1] if x.cls in (js.Return, js.Call, js.Operator)]
+    code = [x for x in code[:-1] if x.cls in (js.Return, js.Call, js.Operator, js.IfElse)]
+
     return expr, code
+
 
 def compileVar(node, env):
     if len(node.values) == 3:
@@ -39,9 +41,27 @@ def compileVar(node, env):
     return js.Null(), code + [js.Operator(op='=', left=js.Symbol(value=name.value), right=value)]
 
 
-# TODO
 def compileIf(node, env):
-    pass
+    symbol = env.gensym()
+
+    _, cond, x, y = node.values
+    cond, c1 = compileExpression(cond, env)
+    x, c2 = compileExpression(x, env)
+    y, c3 = compileExpression(y, env)
+
+    cond = js.Operator(
+        op = '.',
+        left = js.Call(
+            f = js.Symbol(value='__dispatch_method'),
+            args = [cond, js.String(value=':bool')]),
+        right = js.Symbol(value='__value'))
+
+    code = c1 + [js.IfElse(
+        cond = cond,
+        x = c2 + [js.Operator(op='=', left=symbol, right=x)],
+        y = c3 + [js.Operator(op='=', left=symbol, right=y)])]
+
+    return symbol, code
 
 
 
@@ -49,6 +69,7 @@ def compileIf(node, env):
 primitives = {
     'do': compileDo,
     'var': compileVar,
+    'if': compileIf,
     'map': compileMap,
     'keyword': compileKeyword,
     'lambda': compileLambda,

@@ -23,19 +23,21 @@ def compileClass(node, env):
     f = js.Function(env=dummy_env, args=[], body=[
         js.Var(value='cls'),
         js.Var(value='factory'),
-        
+
         js.Operator(
             op = '=',
             left = js.Symbol(value='cls'),
-            right = JSObject('class', js.Null())),
+            right = JSObject('class',
+                __default_methods = js.Object(values=methods))),
 
         js.Operator(
             op = '=',
             left = js.Symbol(value='factory'),
             right = js.Function(env=new_env, args=[], body=[js.Return(
-                value = JSObject('object', js.Object(values=[]),
+                value = JSObject('object',
+                    __value = js.Object(values=[]),
                     __class = js.Symbol(value='cls'),
-                    __methods = js.Object(values=methods)))])),
+                    __methods = js.Object(values=[])))])),
 
         js.Operator(
             op = '=',
@@ -65,8 +67,15 @@ def compileMethod(node, env):
     method_env = MethodEnvironment(env, args=args.values)
     do_expr = List(None, values=[Symbol(None, value='do')] + body)
 
-    selector = '#'.join(arg.values[1].value for arg in args.values if isKeyword(arg))
-    args = [js.Symbol(value=arg.value) for arg in args.values if arg.cls is Symbol]
+    selector = ''.join(
+        ':{}'.format(arg.values[1].value)
+        for arg in args.values
+        if isKeyword(arg))
+
+    args = ([js.Symbol(value='self')] +
+            [js.Symbol(value=arg.value)
+                for arg in args.values
+                if arg.cls is Symbol])
 
     retexpr, code = compileExpression(do_expr, method_env)
     body = code + [js.Return(value=retexpr)]

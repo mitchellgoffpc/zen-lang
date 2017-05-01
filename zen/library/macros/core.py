@@ -73,6 +73,12 @@ def isKeyword(node):
         node.values[0].value == 'keyword' and
         node.values[1].cls is Symbol)
 
+def getSelector(args):
+    return ''.join(
+        ':{}'.format(x.values[1].value)
+        for x in args
+        if isKeyword(x))
+
 def unwind(node):
     result = []
 

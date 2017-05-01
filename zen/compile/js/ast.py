@@ -26,6 +26,10 @@ class Symbol(Node): pass
 class Integer(Node): pass
 class Float(Node): pass
 
+class Boolean(Node):
+    def write(self, indent=0):
+        return 'true' if self.value else 'false'
+
 class Null(Node):
     def write(self, indent=0):
         return 'null'
@@ -83,4 +87,18 @@ class Function(Node):
         return 'function ({}) {{\n{}{}}}'.format(
             args,
             ''.join('{}    {};\n'.format(tabs, line) for line in body),
+            tabs)
+
+class IfElse(Node):
+    def write(self, indent=0):
+        tabs = ' ' * 4 * indent
+        cond = self.cond.write(indent)
+        x = [a.write(indent + 1) for a in self.x]
+        y = [a.write(indent + 1) for a in self.y]
+
+        return 'if ({}) {{\n{}{}}} else {{\n{}{}}}'.format(
+            cond,
+            ''.join('{}    {};\n'.format(tabs, line) for line in x),
+            tabs,
+            ''.join('{}    {};\n'.format(tabs, line) for line in y),
             tabs)

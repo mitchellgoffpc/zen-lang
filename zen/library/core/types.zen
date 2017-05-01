@@ -1,0 +1,26 @@
+(class Boolean
+    (def (:bool) self)
+
+    (def (:str)
+        (if (self)
+            "true"
+            "false")))
+
+(class Integer
+    (def (:bool)
+        (not (self.__value == 0)))
+
+    (def (:str)
+        (__str self.__value)))
+
+(class String
+    (def (:str) self)
+
+    (def (:bool)
+        (not (self :empty?)))
+
+    (def (:empty?)
+        (self :length == 0))
+
+    (def (:length)
+        (__int self.__value.length)))

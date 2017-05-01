@@ -24,10 +24,14 @@ class Environment(object):
         else:
             self.symbols.append(symbol)
 
-    def gen(self):
-        global sym_id
-        sym_id += 1
-        return 'gensym_{}'.format(sym_id)
+    def gensym(self):
+        symbol = '__gensym_{}'.format(self.outermost().gensym_id)
+        self.outermost().gensym_id += 1
+        self.create(symbol)
+        return js.Symbol(value=symbol)
+
+    def outermost(self):
+        return self.outer.outermost()
 
 
 # Function environment
@@ -54,9 +58,6 @@ class FunctionEnvironment(Environment):
             return js.Symbol(value=symbol)
         else:
             return self.outer.find(symbol)
-
-    def outermost(self):
-        return self.outer.outermost()
 
     def compile(self):
         return [js.Var(value=x) for x in self.symbols]
