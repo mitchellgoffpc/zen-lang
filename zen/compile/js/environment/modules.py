@@ -16,22 +16,17 @@ class ModuleEnvironment(Environment):
         self.module = module
         self.imports = {}
         self.macros = {}
-        self.classes = {}
 
     def createImport(self, target, path, alias=None):
         module = self.module.linker.getModule(path)
         self.imports[alias or target] = (module, target)
 
-    def createMacro(self, name, function):
-        self.macros[name] = function
-
-    def createClass(self, env, name, methods):
-        self.classes[name] = (env, methods)
+    def createMacro(self, name, args, body):
+        self.macros[name] = (args, body)
 
     def find(self, symbol):
         if (symbol in self.symbols or
             symbol in self.imports or
-            symbol in self.classes or
             symbol in self.module.linker.prefix):
             return js.Symbol(value=symbol)
         else:
@@ -46,21 +41,4 @@ class ModuleEnvironment(Environment):
 
     # Compile
     def compile(self):
-        return (
-            [js.Var(value=x) for x in self.symbols] +
-            [js.Var(value=x) for x in self.classes] +
-            [self.compileImport(name, path, target)
-                for name, (path, target)
-                in self.imports.items()])
-
-
-    # Compile imports
-    def compileImport(self, name, path, target):
-        path = '.'.join(path + [target])
-
-        return js.Operator(
-            op = '=',
-            left = js.Symbol(value=name),
-            right = js.Call(
-                f = js.Symbol(value='require'),
-                args = [js.String(value=path)]))
+        return [js.Var(value=x) for x in self.symbols]

@@ -40,7 +40,7 @@ class String(Node):
 
 class Array(Node):
     def write(self, indent=0):
-        return '[{}]'.format(' '.join(x.write(indent) for x in self.values))
+        return '[{}]'.format(', '.join(x.write(indent) for x in self.values))
 
 class Object(Node):
     def write(self, indent=0):

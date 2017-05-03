@@ -21,10 +21,15 @@ class Linker(object):
 
     def __init__(self, source, main):
         self.main = main
-        self.source = Module(self, source)
-        self.modules = [self.source]
-        self.prefix = ['__int', '__str', 'print']
+        self.prefix = ['__int', '__str', 'print', 'call']
         self.prefix_modules = []
+
+        if source:
+            self.source = Module(self, source)
+            self.modules = [self.source]
+        else:
+            self.source = None
+            self.modules = []
 
 
     # Compile the source module
@@ -37,7 +42,8 @@ class Linker(object):
             self.prefix_modules += [module]
             self.prefix += module.env.exports()
 
-        self.source.compile()
+        if self.source:
+            self.source.compile()
 
 
     # Get the module at the given path, loading and compiling it if necessary
@@ -54,15 +60,17 @@ class Linker(object):
 
     # Link all the code we've compiled into a single javascript file
     def link(self, output):
+        with open(output, 'w+') as output:
+            output.write(self.write())
+
+    def write(self):
         core = os.path.join(self.main, 'library/js/core.js')
         modules = self.prefix_modules + list(reversed(self.modules))
 
         with open(core, 'r') as prefix:
-            code = prefix.read() + '\n\n'
-            code += '\n\n'.join(x.write() for x in modules)
-
-        with open(output, 'w+') as output:
-            output.write(code)
+            return (
+                prefix.read() + '\n\n' +
+                '\n\n'.join(x.write() for x in modules))
 
 
 

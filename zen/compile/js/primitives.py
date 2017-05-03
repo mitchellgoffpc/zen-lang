@@ -2,10 +2,11 @@ import zen.ast as ast
 import zen.compile.js.ast as js
 
 from zen.compile.js.compile import *
+from zen.compile.js.classes import *
 from zen.compile.js.errors import *
 from zen.compile.js.environment import *
+from zen.compile.js.macros import *
 from zen.compile.js.modules import *
-from zen.compile.js.classes import *
 from zen.compile.js.literals import *
 
 from zen.library.macros.core import *
@@ -71,8 +72,10 @@ primitives = {
     'var': compileVar,
     'if': compileIf,
     'map': compileMap,
+    'quote': compileQuote,
     'keyword': compileKeyword,
     'lambda': compileLambda,
     'def_class': compileClass,
     'def_method': compileMethod,
+    'def_macro': compileMacro,
     'import': compileImport }

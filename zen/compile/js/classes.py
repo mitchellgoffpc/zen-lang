@@ -9,10 +9,9 @@ from zen.library.macros.core import *
 
 # Class compiler
 def compileClass(node, env):
-    name = node.values[1]
+    name = node.values[1].value
     keywords = getKeywords(node.values[2:])
-    outer = env.outermost()
-    outer.create(name)
+    env.create(name)
 
     cls_env = ClassEnvironment(env)
     dummy_env = FunctionEnvironment(env)

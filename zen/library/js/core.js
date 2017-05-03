@@ -25,9 +25,29 @@ var __str = {
         return {__type: 'str', __class: String, __value: x.toString()}
     }};
 
+var __write_str = {
+    __type: 'function',
+    __call: function(x) {
+        if (x.__type == 'tuple') {
+            var contents = x.__value.map(function(x) { return __write_str.__call(x) });
+            return '(' + contents.join(' ') + ')';
+        } else if (x.__type == 'string') {
+            return '"' + x.__value + '"'
+        } else {
+            return x.__value.toString();
+        }}};
+
+var __write = function(x) {
+    console.log(__write_str.__call(x));
+};
+
 var print = {
     __type: 'function',
     __call: function(x) {
         var str = __dispatch_method(x, ':str');
         console.log(str.__value);
     }};
+
+var call = {
+    __type: 'function',
+    __call: function(x) { return x.__call() }};

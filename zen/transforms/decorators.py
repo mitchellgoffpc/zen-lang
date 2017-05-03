@@ -27,12 +27,14 @@ def resolveDecorators(node):
 
 
 
+# Postfix decorators
+def call(node, i):
+    return postfix(node, i, 'call')
+
+
 # Prefix decorators
 def quote(node, i):
     return prefix(node, i, 'quote')
-
-def syntax_quote(node, i):
-    return prefix(node, i, 'syntax-quote')
 
 def unquote(node, i):
     return prefix(node, i, 'unquote')
@@ -69,18 +71,26 @@ def substitute(node, start, end, child):
 
 def prefix(node, i, symbol):
     if i >= len(node.values) - 1:
-        raise Exception("Invalid decorator")
+        raise Exception("Invalid position for prefix decorator")
 
     return substitute(node, i, i+2, List(None, values=[
         Symbol(None, value=symbol),
         node.values[i + 1]]))
 
+def postfix(node, i, symbol):
+    if i == 0:
+        raise Exception("Invalid position for postfix decorator")
+
+    return substitute(node, i-1, i+1, List(None, values=[
+        Symbol(None, value=symbol),
+        node.values[i - 1]]))
+
 
 
 # Decorator table
 decorators = {
+    '!': call,
     '\'': quote,
-    '`': syntax_quote,
     '~': unquote,
     ':': keyword,
     '#': special }

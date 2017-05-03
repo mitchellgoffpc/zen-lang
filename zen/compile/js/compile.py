@@ -42,6 +42,7 @@ def compileExpression(node, env):
 def compileFunctionCall(node, env):
     from zen.compile.js.primitives import primitives
     from zen.compile.js.operators import operators
+    from zen.compile.js.macros import executeMacro
 
     if len(node.values) == 0:
         return JSObject('tuple', __value=js.Array(value=[]))
@@ -51,10 +52,13 @@ def compileFunctionCall(node, env):
     f = node.values[0]
 
     # Check if `f` is a special form
-    if f.cls is ast.Symbol and f.value in primitives:
-        return primitives[f.value](node, env)
-    elif f.cls is ast.Operator and f.value in operators:
+    if f.cls is ast.Operator and f.value in operators:
         return operators[f.value](node, env)
+    elif f.cls is ast.Symbol:
+        if f.value in primitives:
+            return primitives[f.value](node, env)
+        elif f.value in env.outermost().macros:
+            return executeMacro(node, env, f.value)
 
     # If not, see if `f` is a valid symbol in the current environment
     f, f_code = compileExpression(f, env)
