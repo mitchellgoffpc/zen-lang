@@ -93,3 +93,26 @@ def unwind(node):
 
     assert node.cls is Symbol
     return list(reversed([node.value] + result))
+
+def unpack(source, dest):
+    results = []
+    i = 0
+
+    while i < len(source) and i < len(dest):
+        if (dest.values[i].cls is Operator and
+            dest.values[i].value is '&'):
+
+            assert len(dest.values) == i + 2
+            results += [(dest.values[i+1], List(None,
+                values = [Symbol(None, value='tuple')] + source.values[i:]))]
+
+        else:
+            results += [(dest.values[i], source.values[i])]
+
+        i += 1
+
+    return List(None, values=[
+        Symbol(None, value='do'),
+        List(None, values=[
+            List(None, values=[Operator(None, value='='), x, y])
+            for x, y in results])])

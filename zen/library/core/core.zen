@@ -1,2 +1,4 @@
+(import Set Map :from js/util)
+
 (def not (x)
     (if x false true))

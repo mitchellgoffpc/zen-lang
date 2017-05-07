@@ -75,7 +75,7 @@ primitives = {
     'quote': compileQuote,
     'keyword': compileKeyword,
     'lambda': compileLambda,
-    'def_class': compileClass,
-    'def_method': compileMethod,
-    'def_macro': compileMacro,
+    'def-class': compileClass,
+    'def-method': compileMethod,
+    'def-macro': compileMacro,
     'import': compileImport }

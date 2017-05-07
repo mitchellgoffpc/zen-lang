@@ -17,7 +17,6 @@ from zen.transforms.infix import resolveFixity
 from zen.transforms.case import resolveCase
 from zen.transforms.macros import resolveMacros
 
-
 # Compile a def-macro statement
 def compileMacro(node, env):
     assert len(node.values) == 4

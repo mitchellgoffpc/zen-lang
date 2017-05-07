@@ -17,9 +17,12 @@ class ModuleEnvironment(Environment):
         self.imports = {}
         self.macros = {}
 
-    def createImport(self, target, path, alias=None):
-        module = self.module.linker.getModule(path)
+    def createImport(self, target, ns, alias=None):
+        module = self.module.linker.getModule(ns)
         self.imports[alias or target] = (module, target)
+
+        if target not in module.exports():
+            raise CompileError('Module `{}` has no symbol `{}`'.format(ns, target))
 
     def createMacro(self, name, args, body):
         self.macros[name] = (args, body)
@@ -35,10 +38,5 @@ class ModuleEnvironment(Environment):
     def outermost(self):
         return self
 
-    def exports(self):
-        return self.symbols
-
-
-    # Compile
     def compile(self):
         return [js.Var(value=x) for x in self.symbols]

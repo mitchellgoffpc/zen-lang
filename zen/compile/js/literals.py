@@ -72,6 +72,6 @@ def compileLambda(node, env):
 
     retexpr, code = compileExpression(do_expr, func_env)
     body = code + [js.Return(value=retexpr)]
-    args = [js.Symbol(value=arg) for arg in args.values]
+    args = [js.Symbol(value=arg.value) for arg in args.values]
 
     return JSObject('function', __call=js.Function(env=func_env, args=args, body=body)), []

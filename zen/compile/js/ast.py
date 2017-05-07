@@ -2,6 +2,9 @@
 Provides all the classes that will make up the AST for the javascript program
 """
 
+from zen.transforms.case import recase
+
+
 class Node(object):
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
@@ -22,9 +25,12 @@ class Node(object):
 
 
 # Basic node types
-class Symbol(Node): pass
 class Integer(Node): pass
 class Float(Node): pass
+
+class Symbol(Node):
+    def write(self, indent=0):
+        return recase(self.value)
 
 class Boolean(Node):
     def write(self, indent=0):
