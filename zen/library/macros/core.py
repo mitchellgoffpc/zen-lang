@@ -48,6 +48,48 @@ def defClass(name, *args):
         [x for k, v in keywords.items() for x in (keyword(k), v)])
 
 
+def defFor(symbol, *args):
+    return js.Null(), []
+
+    if name.cls is not Symbol:
+        raise Exception()
+
+    keywords = getKeywords(args)
+
+    assert 'in' in keywords
+    collection = keywords['in']
+
+    for arg in args[len(keywords) * 2:]:
+        if (arg.cls is List and
+            len(arg.values) > 2 and
+            arg.values[0].cls is Symbol):
+
+            if (arg.values[0].value == 'def' and
+                arg.values[1].cls is List):
+
+                methods.append(List(None, values=(
+                    [Symbol(None, value='def-method')] + arg.values[1:])))
+
+            elif arg.values[0].value == 'var':
+                properties.append(arg)
+
+
+    # return List(None, values=[
+    #     Symbol(None, values='do'),
+    #     initialize,
+    #     List(None, values=[
+    #         Symbol(None, value='while'),
+    #         List(None, values=[
+    #             ]),
+    #         List(None, values=[
+    #             Operator(None, value='='),
+    #             Symbol(None, value=symbol),
+    #             List(None, value=collection))
+    #         ])
+    # ])
+
+
+
 
 # Helper functions
 def keyword(name):

@@ -12,7 +12,7 @@ def compileExpression(node, env):
     if node.cls is ast.List:
         return compileFunctionCall(node, env)
 
-    elif node.cls is ast.Symbol:
+    elif node.cls in (ast.Symbol, ast.Operator):
         return env.find(node.value), []
 
     elif node.cls is ast.Boolean:
@@ -41,7 +41,6 @@ def compileExpression(node, env):
 # Compile a function call (i.e. evaluate an unquoted list)
 def compileFunctionCall(node, env):
     from zen.compile.js.primitives import primitives
-    from zen.compile.js.operators import operators
     from zen.compile.js.macros import executeMacro
 
     if len(node.values) == 0:
@@ -51,17 +50,31 @@ def compileFunctionCall(node, env):
 
     f = node.values[0]
 
-    # Check if `f` is a special form
-    if f.cls is ast.Operator and f.value in operators:
-        return operators[f.value](node, env)
-    elif f.cls is ast.Symbol:
-        if f.value in primitives:
-            return primitives[f.value](node, env)
-        elif f.value in env.outermost().macros:
-            return executeMacro(node, env, f.value)
+    # First we check if `f` is a primitive
+    if f.cls in (ast.Operator, ast.Symbol) and f.value in primitives:
+        return primitives[f.value](node, env)
 
-    # If not, see if `f` is a valid symbol in the current environment
+    # Otherwise, we need to evaluate `f` and figure out what it is
     f, f_code = compileExpression(f, env)
+
+    # If `f` is a macro, execute it straight away
+    if f.cls is js.Macro:
+        return executeMacro(node, env, f.macro)
+
+    # If `f` isn't a macro, we evaluate each of the arguments and pass them to
+    # `f`. However, function and method calls are handled slightly differently:
+    #
+    # - Methods
+    #     If `f`'s first argument is a KEYWORD, then we make a METHOD call. To
+    #     make one of these, we must first construct a selector from `f`'s
+    #     arguments, then invoke `__dispatch_method`, which looks up the
+    #     selector in `f.__methods` and calls the appropriate javascript
+    #     function.
+    #
+    # - Functions
+    #     If `f`'s first argument is NOT a KEYWORD, then we make a FUNCTION call
+    #     using `__dispatch`, which simply passes the arguments to `f.__call`.
+
     method_call = isKeyword(node.values[1])
 
     if method_call:

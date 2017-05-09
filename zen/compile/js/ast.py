@@ -108,3 +108,15 @@ class IfElse(Node):
             tabs,
             ''.join('{}    {};\n'.format(tabs, line) for line in y),
             tabs)
+
+class While(Node):
+    def write(self, indent=0):
+        tabs = ' ' * 4 * indent
+        cond = self.cond.write(indent)
+        body = [x.write(indent + 1) for x in self.body]
+
+        return 'while ({}) {{\n{}{}}}'.format(
+            cond, ''.join('{}    {};\n'.format(tabs, line) for line in body))
+
+class Macro(Node):
+    pass

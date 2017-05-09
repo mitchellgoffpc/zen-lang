@@ -41,12 +41,9 @@ var __write = function(x) {
     console.log(__write_str.__call(x));
 };
 
-var print = {
+var log = {
     __type: 'function',
-    __call: function(x) {
-        var str = __dispatch_method(x, ':str');
-        console.log(str.__value);
-    }};
+    __call: function(x) { console.log(x.__value) }};
 
 var call = {
     __type: 'function',

@@ -2,7 +2,8 @@
 Transforms the given source code into a list of tokens
 """
 
-from zen.parse.source import Source
+from zen.parse.errors import *
+from zen.parse.source import *
 
 
 # Operator list:
@@ -84,7 +85,7 @@ def readToken(source, from_position):
     if char == '{': return Token(TokenType.BRACE_L, position, position + 1)
     if char == '}': return Token(TokenType.BRACE_R, position, position + 1)
 
-    raise SyntaxError(source.body, position, "Unexpected character: {}".format(char))
+    raise SyntaxError(source, position, "Unexpected character: {}".format(char))
 
 
 
@@ -121,7 +122,7 @@ def readNumber(source, start):
 
     if source.charAt(position) in ('f', 'F', 'd', 'D', 'l', 'L'):
         if is_float and source.charAt(position) in ('l', 'L'):
-            raise SyntaxError('Invalid number, float literal cannot use the "L" prefix')
+            raise SyntaxError(source, position, 'Invalid number, float literal cannot use the "L" prefix')
 
         position += 1
 
@@ -134,7 +135,7 @@ def readNumber(source, start):
 
 def readDigits(source, position):
     if not source.charAt(position).isdigit():
-        raise SyntaxError(source.body, position, 'Invalid number, expected digit but got: ' + ord(char))
+        raise SyntaxError(source, position, 'Invalid number, expected digit but got: ' + ord(char))
 
     while source.charAt(position).isdigit():
         position += 1
@@ -151,10 +152,10 @@ def readString(source, start):
         code = source.charCodeAt(position)
         char = chr(code)
 
-        if code == 0xA or code == 0xD or char == '"':
+        if char == '"':
             break
-        if code < 0x20 and code != 0x9:
-            raise SyntaxError(source.body, position, 'Invalid character within String: ' + code)
+        if code < 0x20 and code not in (0x9, 0xA, 0xD):
+            raise SyntaxError(source, position, 'Invalid character within String: ' + str(code))
 
         position += 1
 
@@ -173,18 +174,18 @@ def readString(source, start):
                 code = source.body[position + 1 : position + 5]
                 ucode = getUnicode(code)
                 if ucode < 0:
-                    raise SyntaxError(source.body, position, 'Invalid character escape sequence: \\u' + code)
+                    raise SyntaxError(source, position, 'Invalid character escape sequence: \\u' + code)
                 else:
                     value += chr(ucode)
                     position += 4
 
-            else: raise SyntaxError(source.body, position, 'Invalid character escape sequence: \\' + char)
+            else: raise SyntaxError(source, position, 'Invalid character escape sequence: \\' + char)
 
             position += 1
             chunk_start = position
 
     if char != '"':
-        raise SyntaxError(source.body, position, 'Unterminated string')
+        raise SyntaxError(source, position, 'Unterminated string')
 
     return Token(TokenType.STRING, start, position + 1, source.body[start+1:position])
 
@@ -224,11 +225,31 @@ def readOperator(source, start):
         position = positionAfterWhitespace(source, position)
         beginning = position
 
-        while (position < source.length and
-               source.charAt(position) != '\n'):
-            position += 1
+        if level >= 3:
+            new_level = 0
+            while (position < source.length and
+                   new_level < level):
+                new_level = (new_level + 1
+                    if source.charAt(position) == ';'
+                    else 0)
+                position += 1
 
-        comment = '(comment :level {} "{}")'.format(level, source.body[beginning:position])
+        else:
+            while (position < source.length and
+                   source.charAt(position) != '\n'):
+                position += 1
+
+        # Remove trailing spaces and semicolons
+        if level >= 3:
+            end = position - level
+        else:
+            end = position
+
+        while source.charCodeAt(end - 1) in (0x0009, 0x0020, 0x000A, 0x000D):
+            end -= 1
+
+        text = source.body[beginning:end].replace('"', '\\"')
+        comment = '(comment :level {} "{}")'.format(level, text)
         source.update(source.body[:start] + comment + source.body[position:])
         return source.nextToken(reset_position=start)
 

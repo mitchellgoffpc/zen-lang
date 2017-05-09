@@ -5,6 +5,7 @@ import zen.compile.js.ast as js
 
 from zen.compile.js.compile import *
 from zen.compile.js.environment import *
+from zen.compile.js.errors import *
 from zen.compile.js.util import *
 from zen.parse.parse import Parser
 
@@ -23,9 +24,13 @@ class Module(object):
         self.linker = linker
         self.source = source
         self.env = ModuleEnvironment(self)
+        self.ns = None
 
     def exports(self):
         return self.env.symbols
+
+    def macros(self):
+        return self.env.macros
 
     def load(self):
         source = os.path.join(self.linker.main, self.source)
@@ -65,8 +70,12 @@ class Module(object):
 
     # Transform a single Zen AST node into a JavaScript AST node
     def compileNode(self, node):
-        expr, code = compileExpression(node, self.env)
-        return code + [expr]
+        try:
+            expr, code = compileExpression(node, self.env)
+            return code + [expr]
+        except CompileError as e:
+            e.module = self
+            raise
 
 
     # Write out the compiled Javascript code as text
@@ -82,10 +91,13 @@ class JSModule(Module):
     def __init__(self, linker, source, symbols=[]):
         self.linker = linker
         self.source = source
-        self.symbols = symbols
+        self.symbols = {x:x for x in symbols}
 
     def exports(self):
         return self.symbols
+
+    def macros(self):
+        return {}
 
     def populate(self, module):
         pass
@@ -143,7 +155,7 @@ def compileImport(node, env):
         assert len(imports) == 1
 
         env.outermost().createImport(
-            target = imports[0],
+            target = None,
             ns = imports[0],
             alias = alias)
 

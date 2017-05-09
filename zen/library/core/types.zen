@@ -1,26 +1,78 @@
-(class Boolean
-    (def (:bool) self)
+(import js)
+(import Set :from js/util :as JS-Set)
+(import Map :from js/util :as JS-Map)
 
-    (def (:str)
-        (if (self)
-            "true"
-            "false")))
+
+(class Boolean
+    (init (value) (value :as Boolean))
+
+    (def (:as Boolean) self)
+    (def (:as Integer) (if self 1 0))
+    (def (:as String) (if self "true" "false")))
+
 
 (class Integer
-    (def (:bool)
-        (not (self.__value == 0)))
+    (init (value) (value :as Integer))
 
-    (def (:str)
-        (__str self.__value)))
+    (def (:as Integer) self)
+    (def (:as Boolean) (self != 0))
+    (def (:as String)  (js/int-to-string self.__value)))
+
 
 (class String
-    (def (:str) self)
+    ;;;
+    (init (& args)
+        (args :map (x -> x :as String) | :join ""))
+    ;;;
 
-    (def (:bool)
-        (not (self :empty?)))
+    (def (:empty?) (self :length == 0))
+    (def (:length) (js/int self.__value.length))
+
+    (def (:as String)  self)
+    (def (:as Boolean) (not (self :empty?)))
+    (def (:as Integer) (js/string-to-int self.__value)))
+
+
+(class Set
+    (init (& args)
+        (self.js-set = (js/new JS-Set))
+        (self :add & args))
+
+    (def (:size)
+        (js/int self.js-set.size))
 
     (def (:empty?)
-        (self :length == 0))
+        (self :size == 0))
 
-    (def (:length)
-        (__int self.__value.length)))
+    ;;;
+    (def (:add & args)
+        (args :each | arg ->
+            (self.js-set.add arg))))
+    ;;;)
+
+
+(def print (x)
+    (js/log (x :as String)))
+
+
+;;;
+; Some examples
+(def factorial (0) 1)
+(def factorial (1) 1)
+(def factorial (n) (factorial (n - 1) + factorial (n - 2)))
+
+(def-case factorial (n)
+    (n = 0) -> 1
+    (n = 1) -> 1
+    :otherwise -> (factorial (n - 1) + factorial (n - 2)))
+
+(result := (case
+    (x = 0) -> 1
+    (x = 1) -> 1
+    :otherwise -> some-value
+    :where (x := 5 + 5)))
+
+(def head ()
+    (error "You can't call head on an empty list, dummy!"))
+(def head (x & _) x)
+;;;

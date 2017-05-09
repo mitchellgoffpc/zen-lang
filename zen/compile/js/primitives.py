@@ -1,13 +1,14 @@
 import zen.ast as ast
 import zen.compile.js.ast as js
 
-from zen.compile.js.compile import *
 from zen.compile.js.classes import *
-from zen.compile.js.errors import *
+from zen.compile.js.compile import *
 from zen.compile.js.environment import *
+from zen.compile.js.errors import *
 from zen.compile.js.macros import *
 from zen.compile.js.modules import *
 from zen.compile.js.literals import *
+from zen.compile.js.operators import *
 
 from zen.library.macros.core import *
 
@@ -43,7 +44,7 @@ def compileVar(node, env):
 
 
 def compileIf(node, env):
-    symbol = env.gensym()
+    symbol = js.Symbol(value=env.gensym())
 
     _, cond, x, y = node.values
     cond, c1 = compileExpression(cond, env)
@@ -54,7 +55,7 @@ def compileIf(node, env):
         op = '.',
         left = js.Call(
             f = js.Symbol(value='__dispatch_method'),
-            args = [cond, js.String(value=':bool')]),
+            args = [cond, js.String(value=':as'), js.Symbol(value='Boolean')]),
         right = js.Symbol(value='__value'))
 
     code = c1 + [js.IfElse(
@@ -66,11 +67,34 @@ def compileIf(node, env):
 
 
 
+def compileWhile(node, env):
+    assert len(node.values) > 1
+
+    cond, c1 = compileExpression(node.values[1], env)
+    body = []
+
+    for expr in node.values[2:]:
+        e, c = compileExpression(expr, env)
+        body = c + [e]
+
+    cond = js.Operator(
+        op = '.',
+        left = js.Call(
+            f = js.Symbol(value='__dispatch_method'),
+            args = [cond, js.String(value=':bool')]),
+        right = js.Symbol(value='__value'))
+
+    code = c1 + js.While(cond=cond, body=body)
+
+    return js.Null(), code
+
+
 # Primitive dispatch
 primitives = {
     'do': compileDo,
     'var': compileVar,
     'if': compileIf,
+    'while': compileWhile,
     'map': compileMap,
     'quote': compileQuote,
     'keyword': compileKeyword,
@@ -78,4 +102,11 @@ primitives = {
     'def-class': compileClass,
     'def-method': compileMethod,
     'def-macro': compileMacro,
-    'import': compileImport }
+    'operator': compileOperator,
+    'import': compileImport,
+
+    # operators
+    '=': compileSet,
+    '.': compileDot,
+    'js/eq': lambda node, env: compileBooleanOp(node, env, '=='),
+    'js/neq': lambda node, env: compileBooleanOp(node, env, '!=') }

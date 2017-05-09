@@ -20,7 +20,7 @@ from zen.transforms.macros import resolveMacros
 # Compile a def-macro statement
 def compileMacro(node, env):
     assert len(node.values) == 4
-    assert node.values[1].cls is ast.Symbol
+    assert node.values[1].cls in (ast.Symbol, ast.Operator)
     assert node.values[2].cls is ast.List
 
     name = node.values[1].value
@@ -38,7 +38,7 @@ def compileMacro(node, env):
 
 # Execute the given macro
 def executeMacro(node, env, macro):
-    args, f = env.outermost().macros[macro]
+    args, f = macro
     quoted = [quote(x, env)[0] for x in node.values[1:]]
 
     code = [

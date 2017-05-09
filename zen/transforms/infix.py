@@ -1,8 +1,11 @@
 from zen.ast import *
 
+skips = ['operator', 'def-macro']
+
 operators = {
-    '->': (2, 'left'),
-    '=': (3, 'left'),
+    '|': (2, 'right'),
+    '->': (3, 'left'),
+    '=': (4, 'left'),
 
     '==': (8, 'right'),
     '!=': (8, 'right'),
@@ -41,7 +44,13 @@ def resolveFixity(node):
     if (node.cls is not List or
         len(node.values) <= 1):
         return node
+
     assert node.values[-1].cls is not Operator
+
+    # Skip special forms, like `operator`
+    if (node.values[0].cls is Symbol and
+        node.values[0].value in skips):
+        return List(None, values=[resolveFixity(x) for x in node.values])
 
     input = node.values[::-1]
     operators = []

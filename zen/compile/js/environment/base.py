@@ -7,28 +7,29 @@ import zen.compile.js.ast as js
 
 from zen.compile.js.errors import *
 
-sym_id = 0
+gensym_id = 0
 
 
 # Environment base class
 class Environment(object):
     def __init__(self):
-        self.symbols = []
+        self.symbols = {}
 
     def __str__(self):
         return str(self.symbols)
 
-    def create(self, symbol):
+    def create(self, symbol, js_symbol=None):
         if symbol in self.symbols:
             raise CompileError('Symbol `{}` is already defined'.format(symbol))
         else:
-            self.symbols.append(symbol)
+            self.symbols[symbol] = (js_symbol or symbol)
 
     def gensym(self):
-        symbol = '__gensym_{}'.format(self.outermost().gensym_id)
-        self.outermost().gensym_id += 1
-        self.create(symbol)
-        return js.Symbol(value=symbol)
+        global gensym_id
+
+        symbol = '__gensym_{}'.format(gensym_id)
+        gensym_id += 1
+        return symbol
 
     def outermost(self):
         return self.outer.outermost()
