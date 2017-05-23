@@ -59,19 +59,3 @@ def compileMap(node, env):
         i += 2
 
     return JSObject('map', __value=js.Object(values=cells)), code
-
-
-# Lambda compiler
-def compileLambda(node, env):
-    if len(node.values) < 3:
-        raise ArgumentError('lambda', len(node.values) - 1, 3, "...")
-
-    args, body = node.values[1], node.values[2:]
-    func_env = FunctionEnvironment(env, [arg.value for arg in args.values])
-    do_expr = List(None, values=[Symbol(None, value='do')] + body)
-
-    retexpr, code = compileExpression(do_expr, func_env)
-    body = code + [js.Return(value=retexpr)]
-    args = [js.Symbol(value=arg.value) for arg in args.values]
-
-    return JSObject('function', __call=js.Function(env=func_env, args=args, body=body)), []

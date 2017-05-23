@@ -4,18 +4,19 @@ from zen.library.macros.core import *
 
 # Macros
 macros = {
-    'def': defFunction,
-    'class': defClass,
+    # 'def': defFunction,
+    # 'class': defClass,
     'comment': lambda *args: None,
-    '->': lambda a, b: List(None, values=[Symbol(None, value="lambda"), a, b]),
-    '=': lambda a, b: List(None, values=[Symbol(None, value="set"), a, b]) }
+    # '->': lambda a, b: List(None, values=[Symbol(None, value="lambda"), a, b]),
+    '=': lambda a, b: List(None, values=[Symbol(None, value="js/assign"), resolveMacros(a), resolveMacros(b)]),
+    '.': lambda a, b: List(None, values=[Symbol(None, value='js/dot'), resolveMacros(a), resolveMacros(b)])}
 
 
 # Macro resolution transform
 def resolveMacros(node):
     if (node.cls is List and
         len(node.values) > 0 and
-        node.values[0].cls is Symbol and
+        node.values[0].cls in (Symbol, Operator) and
         node.values[0].value in macros):
         return macros[node.values[0].value](*node.values[1:])
     elif node.cls is List:

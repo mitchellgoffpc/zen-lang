@@ -10,26 +10,27 @@ from zen.compile.js.environment.classes import *
 # Root environment
 class ModuleEnvironment(Environment):
     def __init__(self, module):
-        super(ModuleEnvironment, self).__init__()
+        super(ModuleEnvironment, self).__init__(None)
         self.module = module
         self.imports = {}
         self.macros = {}
+        self.labels = {}
 
     def createImport(self, target, ns, alias=None):
         module = self.module.linker.getModule(ns)
 
         if target:
             if target in module.exports():
-                self.imports[alias or target] = (module, target)
+                self.imports[alias or target] = module.exports()[target]
             elif target in module.macros():
-                self.macros[alias or target] = module.macros[target]
+                self.macros[alias or target] = module.macros()[target]
             else:
                 raise CompileError('Module `{}` has no symbol `{}`'.format(ns, target))
 
         else:
-            for target in module.exports():
+            for target, js_symbol in module.exports().items():
                 symbol = '{}/{}'.format(alias or ns, target)
-                self.imports[symbol] = (module, target)
+                self.imports[symbol] = js_symbol
             for target, macro in module.macros().items():
                 symbol = '{}/{}'.format(alias or ns, target)
                 self.macros[symbol] = macro
@@ -41,7 +42,7 @@ class ModuleEnvironment(Environment):
         if symbol in self.symbols:
             return js.Symbol(value=self.symbols[symbol])
         elif symbol in self.imports:
-            return js.Symbol(value=symbol)
+            return js.Symbol(value=self.imports[symbol])
         elif symbol in self.module.linker.prefix:
             return js.Symbol(value=self.module.linker.prefix[symbol])
 
@@ -56,4 +57,4 @@ class ModuleEnvironment(Environment):
         return self
 
     def compile(self):
-        return [js.Var(value=x) for x in self.symbols]
+        return [js.Var(value=y) for x, y in self.symbols.items()]

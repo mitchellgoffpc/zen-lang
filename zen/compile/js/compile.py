@@ -17,13 +17,13 @@ def compileExpression(node, env):
 
     elif node.cls is ast.Boolean:
         return JSObject('bool',
-            __value = js.Boolean(value=False),
-            __class = js.Symbol(value='Boolean')), []
+            __value = js.Boolean(value=('true' if node.value else 'false')),
+            __class = js.Symbol(value='bool')), []
 
     elif node.cls is ast.Integer:
         return JSObject('int',
             __value = js.Integer(value=node.value),
-            __class = js.Symbol(value='Integer')), []
+            __class = js.Symbol(value='int')), []
 
     elif node.cls is ast.Float:
         return JSObject('float', __value=js.Float(value=node.value)), []
@@ -31,7 +31,7 @@ def compileExpression(node, env):
     elif node.cls is ast.String:
         return JSObject('string',
             __value = js.String(value=node.value),
-            __class = js.Symbol(value='String')), []
+            __class = js.Symbol(value='str')), []
 
     else:
         raise CompileError('Unexpected node - {}'.format(node))
@@ -44,7 +44,7 @@ def compileFunctionCall(node, env):
     from zen.compile.js.macros import executeMacro
 
     if len(node.values) == 0:
-        return JSObject('tuple', __value=js.Array(value=[]))
+        return JSObject('tuple', __value=js.Array(values=[]))
     if len(node.values) == 1:
         return compileExpression(node.values[0], env)
 

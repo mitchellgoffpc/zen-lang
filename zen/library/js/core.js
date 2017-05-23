@@ -1,44 +1,68 @@
 function __dispatch(f) {
     var args = Array.prototype.slice.call(arguments, 1);
-    return f.__call.apply(null, args);
-};
+
+    if (f.__type == 'class') {
+        var obj = f.__new();
+        f.__init.apply(null, [obj].concat(args));
+        return obj;
+    } else {
+        return f.__call.apply(null, args);
+    }};
 
 function __dispatch_method(obj, selector) {
-    var args = Array.prototype.slice.call(2, arguments);
-    args.unshift(obj);
+    var args = Array.prototype.slice.call(arguments, 2);
+    args = [obj, null].concat(args);
 
-    if (obj.__methods && obj.__methods[selector]) {
-        return obj.__methods[selector].apply(null, args);
+    var _methods = obj.__class.__methods;
+    var _super = obj.__class.__super;
+
+    if (_methods && _methods[selector]) {
+        return _methods[selector].apply(null, args);
+    } else if (_super && _super.__methods && _super.__methods[selector]) {
+        return _super.__methods[selector].apply(null, args);
     } else {
-        return obj.__class.__default_methods[selector].apply(null, args);
+        throw Error("(class " + name + ") doesn't know how to respond to selector " + selector);
+    }};
+
+var __bool = {
+    __type: 'function',
+    __call: function(x) {
+        return {__type: 'bool', __class: bool, __value: (x ? true : false)};
     }};
 
 var __int = {
     __type: 'function',
     __call: function(x) {
-        return {__type: 'int', __class: Integer, __value: x}
+        return {__type: 'int', __class: int, __value: x};
     }};
 
 var __str = {
     __type: 'function',
     __call: function(x) {
-        return {__type: 'str', __class: String, __value: x.toString()}
+        return {__type: 'str', __class: str, __value: x.toString()};
+    }};
+
+var __new = {
+    __type: 'function',
+    __call: function(x) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return new (Function.prototype.bind.apply(x, args));
     }};
 
 var __write_str = {
     __type: 'function',
     __call: function(x) {
         if (x.__type == 'tuple') {
-            var contents = x.__value.map(function(x) { return __write_str.__call(x) });
-            return '(' + contents.join(' ') + ')';
+            var contents = x.__value.map(function(x) { return __write_str.__call(x).__value });
+            return __str.__call('(' + contents.join(' ') + ')');
         } else if (x.__type == 'string') {
-            return '"' + x.__value + '"'
+            return __str.__call('"' + x.__value + '"');
         } else {
-            return x.__value.toString();
+            return __str.__call(x.__value.toString());
         }}};
 
 var __write = function(x) {
-    console.log(__write_str.__call(x));
+    console.log(__write_str.__call(x).__value);
 };
 
 var log = {
@@ -48,3 +72,11 @@ var log = {
 var call = {
     __type: 'function',
     __call: function(x) { return x.__call() }};
+
+var is_type = {
+    __type: 'function',
+    __call: function(x, y) { return __bool.__call(x.__class == y) }};
+
+var int_to_string = {
+    __type: 'function',
+    __call: function(x) { return __str.__call(x.toString()) }};

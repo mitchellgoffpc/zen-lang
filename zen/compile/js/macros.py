@@ -14,8 +14,8 @@ from zen.parse.parse import Parser
 
 from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
-from zen.transforms.case import resolveCase
 from zen.transforms.macros import resolveMacros
+
 
 # Compile a def-macro statement
 def compileMacro(node, env):
@@ -25,7 +25,7 @@ def compileMacro(node, env):
 
     name = node.values[1].value
     args = node.values[2]
-    macro_env = FunctionEnvironment(env, [x.value for x in args.values])
+    macro_env = FunctionEnvironment(env, {x.value:x.value for x in args.values})
     retexpr, code = compileExpression(node.values[3], macro_env)
     body = code + [js.Return(value=retexpr)]
 
@@ -86,8 +86,7 @@ def executeMacro(node, env, macro):
     transforms = [
         resolveDecorators,
         resolveFixity,
-        resolveMacros,
-        resolveCase]
+        resolveMacros]
 
     for transform in transforms:
         node = transform(node)

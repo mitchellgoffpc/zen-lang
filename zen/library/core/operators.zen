@@ -1,0 +1,7 @@
+(import js)
+
+(operator == (x y)
+    (js/eq x.__value y.__value))
+
+(operator != (x y)
+    (js/neq x.__value y.__value))

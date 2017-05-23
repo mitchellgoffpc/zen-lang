@@ -42,7 +42,7 @@ class List(Node):
     def __str__(self):
         return self.fstr.format(' '.join(str(x) for x in self.values))
 
-class Vector(List):
+class Array(List):
     fstr = '[{}]'
 
 class Map(List):

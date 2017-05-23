@@ -13,14 +13,11 @@ from zen.library.macros.core import *
 
 from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
-from zen.transforms.case import resolveCase
 from zen.transforms.macros import resolveMacros
 
 
 class Module(object):
     def __init__(self, linker, source):
-        assert source != '__int'
-
         self.linker = linker
         self.source = source
         self.env = ModuleEnvironment(self)
@@ -33,16 +30,14 @@ class Module(object):
         return self.env.macros
 
     def load(self):
-        source = os.path.join(self.linker.main, self.source)
-
-        with open(source, 'r') as code:
+        with open(self.source, 'r') as code:
             return code.read()
 
 
-    # Populate this module with the exports of module y
+    # Populate this module with the exports of another module
     def populate(self, module):
-        for target in module.exports():
-            self.env.imports[target] = (module, target)
+        for target, symbol in module.exports().items():
+            self.env.imports[target] = symbol
 
 
     # Read, parse, and compile a Zen source file
@@ -88,10 +83,10 @@ class Module(object):
 
 # A dummy module that allows us to access built-in js functionality
 class JSModule(Module):
-    def __init__(self, linker, source, symbols=[]):
+    def __init__(self, linker, source, symbols={}):
         self.linker = linker
         self.source = source
-        self.symbols = {x:x for x in symbols}
+        self.symbols = symbols
 
     def exports(self):
         return self.symbols

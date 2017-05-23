@@ -11,18 +11,24 @@ gensym_id = 0
 
 
 # Environment base class
+
+# Environments are all about dealing with the mapping from Zen symbols
+# to JavaScript symbols
 class Environment(object):
-    def __init__(self):
+    def __init__(self, outer):
+        self.outer = outer
         self.symbols = {}
 
     def __str__(self):
         return str(self.symbols)
 
-    def create(self, symbol, js_symbol=None):
+    def create(self, symbol):
         if symbol in self.symbols:
-            raise CompileError('Symbol `{}` is already defined'.format(symbol))
+            return self.symbols[symbol]
         else:
-            self.symbols[symbol] = (js_symbol or symbol)
+            js_sym = self.gensym()
+            self.symbols[symbol] = js_sym
+            return js_sym
 
     def gensym(self):
         global gensym_id
@@ -34,31 +40,22 @@ class Environment(object):
     def outermost(self):
         return self.outer.outermost()
 
+    def compile(self):
+        return [js.Var(value=x) for x in self.symbols]
+
 
 # Function environment
 class FunctionEnvironment(Environment):
-    def __init__(self, outer, args=[]):
-        super(FunctionEnvironment, self).__init__()
-        self.outer = outer
+    def __init__(self, outer, args={}):
+        super(FunctionEnvironment, self).__init__(outer)
+        assert isinstance(args, dict)
         self.args = args
-
-    def create(self, symbol):
-        if symbol in self.args:
-            raise CompileError('Symbol `{}` is already defined'.format(symbol))
-        else:
-            return super(FunctionEnvironment, self).create(symbol)
-
-    def create_arg(self, symbol):
-        if symbol in self.args:
-            raise CompileError('Argument `{}` is already defined'.format(symbol))
-        else:
-            self.args.append(symbol)
+        self.args['js/arguments'] = 'arguments'
 
     def find(self, symbol):
-        if symbol in self.symbols or symbol in self.args:
-            return js.Symbol(value=symbol)
+        if symbol in self.symbols:
+            return js.Symbol(value=self.symbols[symbol])
+        elif symbol in self.args:
+            return js.Symbol(value=self.args[symbol])
         else:
             return self.outer.find(symbol)
-
-    def compile(self):
-        return [js.Var(value=x) for x in self.symbols]

@@ -11,15 +11,35 @@ class Linker(object):
         self.macros = {}
 
         self.modules = collections.OrderedDict([
-            ('js/util', JSModule(self, None, symbols=['Set', 'Map'])),
-            ('js', JSModule(self, 'library/js/core.js', symbols=[
-                'log', 'call',
-                'int', 'string',
-                'int-to-string', 'string-to-int']))])
+            ('js/util', JSModule(self, None, symbols={
+                'Set': 'Set',
+                'Map': 'Map'})),
+            ('js', JSModule(self, os.path.join(self.main, 'library/js/core.js'), symbols={
+                'true': 'true',
+                'false': 'false',
+                'null': 'null',
+
+                'log': 'log',
+                'call': 'call',
+
+                'new': '__new',
+                'bool': '__bool',
+                'int': '__int',
+                'str': '__str',
+
+                'is-type?': 'is_type',
+                'int-to-string': 'int_to_string',
+                'string-to-int': 'string_to_int'}))])
 
         self.stdlib = collections.OrderedDict([
-            ('zen/core', Module(self, 'library/core/core.zen')),
-            ('zen/types', Module(self, 'library/core/types.zen'))])
+            ('zen/headers', JSModule(self, None, symbols={
+                'bool': 'bool',
+                'int': 'int',
+                'str': 'str'})),
+            ('zen/macros', Module(self, os.path.join(self.main, 'library/macros/core.zen'))),
+            ('zen/operators', Module(self, os.path.join(self.main, 'library/core/operators.zen'))),
+            ('zen/core', Module(self, os.path.join(self.main, 'library/core/core.zen'))),
+            ('zen/types', Module(self, os.path.join(self.main, 'library/core/types.zen')))])
 
         if source:
             self.source = Module(self, source)
@@ -49,8 +69,7 @@ class Linker(object):
         if ns in self.modules:
             return self.modules[ns]
         else:
-            source = os.path.join(self.main, '{}.zen'.format(ns))
-            module = Module(self, source)
+            module = Module(self, os.path.join(self.main, '{}.zen'.format(ns)))
             module.ns = ns
             module.compile()
             self.modules[ns] = module

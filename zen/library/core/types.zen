@@ -3,36 +3,36 @@
 (import Map :from js/util :as JS-Map)
 
 
+;; Forward declarations
 (class Boolean
-    (init (value) (value :as Boolean))
-
-    (def (:as Boolean) self)
-    (def (:as Integer) (if self 1 0))
-    (def (:as String) (if self "true" "false")))
+    (init (value|bool) (self.__value = value.__value))
+    (init (value|int)  (init (if value true false)))
+    (init (value|str)  (init (not (value :empty?)))))
 
 
 (class Integer
-    (init (value) (value :as Integer))
-
-    (def (:as Integer) self)
-    (def (:as Boolean) (self != 0))
-    (def (:as String)  (js/int-to-string self.__value)))
+    (init (value|bool) (init (if self 1 0)))
+    (init (value|int)  (self.__value == value.__value))
+    (init (value|str)  (init (js/string-to-int self.__value))))
 
 
 (class String
+    (init (value|bool) (init (if value "true" "false")))
+    (init (value|int)  (init (js/int-to-string value.__value)))
+    (init (value|str)  (self.__value = value.__value))
+
     ;;;
     (init (& args)
-        (args :map (x -> x :as String) | :join ""))
+        (args :map (x -> :as String} | :join "")))
     ;;;
 
     (def (:empty?) (self :length == 0))
-    (def (:length) (js/int self.__value.length))
+    (def (:length) (js/int self.__value.length)))
 
-    (def (:as String)  self)
-    (def (:as Boolean) (not (self :empty?)))
-    (def (:as Integer) (js/string-to-int self.__value)))
+(class Array)
+(class Set)
 
-
+;;;;
 (class Set
     (init (& args)
         (self.js-set = (js/new JS-Set))
@@ -49,14 +49,20 @@
         (args :each | arg ->
             (self.js-set.add arg))))
     ;;;)
-
+;;;;
 
 (def print (x)
-    (js/log (x :as String)))
+    (js/log (str x)))
+
+;; Type aliases
+(bool = Boolean)
+(int = Integer)
+(str = String)
+(array = Array)
 
 
 ;;;
-; Some examples
+;; Some examples
 (def factorial (0) 1)
 (def factorial (1) 1)
 (def factorial (n) (factorial (n - 1) + factorial (n - 2)))

@@ -5,17 +5,3 @@
 
 (def call (x)
     (js/call x))
-
-(operator == (x y)
-    (js/eq x.__value y.__value))
-
-(operator != (x y)
-    (js/neq x.__value y.__value))
-
-;;;
-(def-macro | (x y)
-    '((~x) ~y))
-
-(def-macro -> (x y)
-    '(lambda (~x) ~y))
-;;;

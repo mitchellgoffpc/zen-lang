@@ -2,7 +2,7 @@ from zen.ast import *
 
 
 def resolveDecorators(node):
-    if node.cls not in (List, Vector, Map):
+    if node.cls not in (List, Array, Map):
         return node
 
     i = 0
@@ -16,9 +16,9 @@ def resolveDecorators(node):
 
     if node.cls is List:
         return List(None, values=[resolveDecorators(child) for child in node.values])
-    elif node.cls is Vector:
+    elif node.cls is Array:
         return List(None, values=(
-            [Symbol(None, value='vector')] +
+            [Symbol(None, value='array')] +
             [resolveDecorators(child) for child in node.values]))
     elif node.cls is Map:
         return List(None, values=(

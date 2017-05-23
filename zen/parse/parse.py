@@ -36,9 +36,9 @@ class Parser:
         values = self.any(TokenType.PAREN_L, self.parseExpression, TokenType.PAREN_R)
         return List(self, values=values)
 
-    def parseVector(self):
+    def parseArray(self):
         values = self.any(TokenType.BRACKET_L, self.parseExpression, TokenType.BRACKET_R)
-        return Vector(self, values=values)
+        return Array(self, values=values)
 
     def parseMap(self):
         values = self.any(TokenType.BRACE_L, self.parseExpression, TokenType.BRACE_R)
@@ -51,7 +51,7 @@ class Parser:
         if token.type is TokenType.PAREN_L:
             return self.parseList()
         elif token.type is TokenType.BRACKET_L:
-            return self.parseVector()
+            return self.parseArray()
         elif token.type is TokenType.BRACE_L:
             return self.parseMap()
         elif token.type is TokenType.INTEGER:
