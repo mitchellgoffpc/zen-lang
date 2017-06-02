@@ -1,6 +1,5 @@
-"""
-Provides a class to hold the source code.
-"""
+# Source: Provides a wrapper around the source code, with some helpful methods
+# to access specific characters.
 
 class Source(object):
     def __init__(self, body):

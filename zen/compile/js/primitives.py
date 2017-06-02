@@ -6,90 +6,83 @@ from zen.compile.js.compile import *
 from zen.compile.js.environment import *
 from zen.compile.js.errors import *
 from zen.compile.js.functions import *
+from zen.compile.js.imports import *
 from zen.compile.js.macros import *
 from zen.compile.js.modules import *
 from zen.compile.js.literals import *
 from zen.compile.js.operators import *
 
-from zen.library.macros.core import *
 
-
-# Primitive compilers
+# Compile a (do ...) expression
 def compileDo(node, env):
-    exprs = [compileExpression(expr, env) for expr in node.values[1:]]
-    code = [x for expr, code in exprs for x in code + [expr]]
-
-    expr = code[-1]
-    code = [x for x in code[:-1] if x.cls in (js.Return, js.Call, js.Operator, js.IfElse)]
-
-    return expr, code
+    return [x for expr in node.values[1:]
+              for x in compileExpression(expr, env)]
 
 
-def compileIf(node, env):
-    symbol = js.Symbol(value=env.gensym())
+# Compile a (js/if-else ...) expression
+def compileIfElse(node, env):
+    symbol = env.gensym()
 
     _, cond, x, y = node.values
-    cond, c1 = compileExpression(cond, env)
-    x, c2 = compileExpression(x, env)
-    y, c3 = compileExpression(y, env)
+    c1 = compileExpression(cond, env)
+    c2 = compileExpression(x, env)
+    c3 = compileExpression(y, env)
+    cond, x, y = c1.pop(), c2.pop(), c3.pop()
 
-    cond = js.Operator(
-        op = '.',
-        left = js.Call(
-            f = js.Symbol(value='__dispatch'),
-            args = [js.Symbol(value='bool'), cond]),
-        right = js.Symbol(value='__value'))
-
-    code = c1 + [js.IfElse(
-        cond = cond,
-        x = c2 + [js.Operator(op='=', left=symbol, right=x)],
-        y = c3 + [js.Operator(op='=', left=symbol, right=y)])]
-
-    return symbol, code
+    return c1 + [
+        js.Var(value=symbol.value),
+        js.IfElse(
+            cond = cond,
+            x = c2 + [js.Operator(op='=', left=symbol, right=x)],
+            y = c3 + [js.Operator(op='=', left=symbol, right=y)]),
+        symbol]
 
 
-
-def compileWhile(node, env):
-    assert len(node.values) > 1
-
-    cond, c1 = compileExpression(node.values[1], env)
-    body = []
-
-    for expr in node.values[2:]:
-        e, c = compileExpression(expr, env)
-        body = c + [e]
-
-    cond = js.Operator(
-        op = '.',
-        left = js.Call(
-            f = js.Symbol(value='__dispatch_method'),
-            args = [cond, js.String(value=':bool')]),
-        right = js.Symbol(value='__value'))
-
-    code = c1 + js.While(cond=cond, body=body)
-
-    return js.Null(), code
+# Forward-declare a symbol
+def compileDeclare(node, env):
+    for child in node.values[1:]:
+        assert  child.cls is ast.Symbol
+        try:    env.find(child.value)
+        except: env.create(child.value)
+    return []
 
 
-# Primitive dispatch
+# Compile a (comment ...) expression. This is just a stub for now.
+def compileComment(node, env):
+    return []
+
+
+# This is a dispatcher which maps all of the the primitive Zen functions to
+# their respective Python compiler functions.
 primitives = {
     'do': compileDo,
-    'if': compileIf,
-    'while': compileWhile,
-    'map': compileMap,
+    'declare': compileDeclare,
+    'import': compileImport,
+    'comment': compileComment,
+    'js/if-else': compileIfElse,
+
+    'regexp': compileRegexp,
     'quote': compileQuote,
     'keyword': compileKeyword,
+
     'lambda': compileLambda,
     'def': compileFunction,
     'class': compileClass,
-    'init': compileInitCall,
+    'extend': compileExtend,
     'def-method': compileMethod,
     'def-macro': compileMacro,
-    'operator': compileOperator,
-    'import': compileImport,
+    'def-operator': compileFunction,
 
     # operators
     'js/dot': compileDot,
     'js/assign': compileAssign,
-    'js/eq': lambda node, env: compileBooleanOp(node, env, '=='),
-    'js/neq': lambda node, env: compileBooleanOp(node, env, '!=') }
+
+    'js/eq':  lambda node, env: compileOp(node, env, '==', 'Bool'),
+    'js/neq': lambda node, env: compileOp(node, env, '!=', 'Bool'),
+    'js/and': lambda node, env: compileOp(node, env, '&&', 'Bool'),
+    'js/or':  lambda node, env: compileOp(node, env, '||', 'Bool'),
+
+    'js/add': lambda node, env: compileOp(node, env, '+', 'Int'),
+    'js/sub': lambda node, env: compileOp(node, env, '-', 'Int'),
+    'js/mul': lambda node, env: compileOp(node, env, '*', 'Int'),
+    'js/div': lambda node, env: compileOp(node, env, '/', 'Int')}

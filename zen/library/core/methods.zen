@@ -1,0 +1,81 @@
+;; Many of the core classes in the Zen Prelude (Object, Int, String, etc) are
+;; defined in zen/types without any methods, because their methods rely on
+;; operators and functions which aren't available when the classes themselves
+;; are first declared. The zen/methods module extends these core classes,
+;; providing them with an extensive collection of methods which can be called
+;; from this point on.
+
+(import js)
+(import js/util)
+
+
+(extend Object
+    (def (:class) (js/get-class self)))
+
+
+(extend Bool
+    (init (x) (js/assign
+        (js/dot self __value)
+        (js/dot (x :bool) __value)))
+
+    (def (:bool) self)
+    (def (:int)  (if self 1 0))
+    (def (:str)  (if self "true" "false")))
+
+
+(extend Int
+    (init (x) (js/assign
+        (js/dot self __value)
+        (js/dot (x :int) __value)))
+
+    (def (:bool) (if (self == 0) false true))
+    (def (:int)  self)
+    (def (:str)  (js/int-to-string (js/dot self __value)))
+
+    (def (:double) (self * 2)))
+
+
+(extend String
+    (init (x) (js/assign
+        (js/dot self __value)
+        (js/dot (x :str) __value)))
+
+    ;;;
+    (init (& args)
+        (args :map (x -> x :str) | :join ""))
+    ;;;
+
+    (def (:bool) (if (self :empty?) false true))
+    (def (:int)  (js/string-to-int (js/dot self __value)))
+    (def (:str)  self)
+
+    (def (:empty?) (self :length == 0))
+    (def (:length) (js/int (js/dot (js/dot self __value) length))))
+
+
+(extend Array
+    (init () (js/assign (js/dot self __value) (js/new js/util/Array)))
+
+    (def (:empty?) (self :length == 0))
+    (def (:length) (js/int (js/dot (js/dot self __value) length))))
+
+(class Map
+    (init () (js/assign (js/dot self __value) (js/new js/util/Map))))
+
+(class Set
+    (init () (js/assign (js/dot self __value) (js/new js/util/Set)))
+
+    (def (:empty?) (self :size == 0))
+    (def (:size) (js/int (js/dot (js/dot self __value) size))))
+
+
+;;;
+(class Set
+    (init (& args)
+        (self.js-set = (js/new JS-Set))
+        (self :add & args))
+
+    (def (:add & args)
+        (args :each | arg ->
+            (js/dot (js/dot self __values) add) arg)))
+;;;

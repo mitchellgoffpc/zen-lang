@@ -6,28 +6,44 @@ from zen.compile.js.environment import *
 from zen.compile.js.util import *
 
 
-# An Unpacker is an object to help us "unpack" a single argument in a list
-# into whatever variable(s) we desire. An unpacker may also place certain
-# restrictions on the value or type of the argument.
+# An Unpacker's job is to construct the run-time checks and unpacking
+# code that we need to do pattern-matching for a single member in a given
+# pattern. An Unpacker has two methods, .compileCondition and .compileUnpack,
+# which handle the tasks of determining whether a given value matches a pattern,
+# and of unpacking that value if it DOES match the pattern, respectively.
 
 class Unpacker(object):
     def __init__(self, i, arg):
         self.i = js.Integer(value=i)
-        self.arg = js.Symbol(value=arg.value)
+        self.arg = arg.value
 
     def symbol(self, env):
-        return (self.arg.value, self.arg.value)
+        return (env.find(self.arg), self.arg)
+
+    # .compileCondition: Return a boolean condition that contains
+    # any necessary checks on whether the supplied value matches the given
+    # pattern.
+
+    def compileCondition(self, env, source):
+        pass
+
+    # .compileUnpack: If the checks pass for all of a pattern's members, then
+    # the pattern is a match and each Unpacker needs to unpack its value into
+    # one or more JavaScript variables that correspond to the pattern's Zen
+    # symbols.
 
     def compileUnpack(self, env, source):
+        symbol = env.create(self.arg)
+
         return [js.Operator(
             op = '=',
-            left = self.arg,
+            left = symbol,
             right = js.Index(list=env.find(source), index=self.i))]
 
 
 
-# A DefaultUnpacker is a catch-all condition for when no restrictions on the
-# argument are given.
+# A DefaultUnpacker is a catch-all pattern-matcher for when we don't want to
+# do any checks on a value at all.
 
 class DefaultUnpacker(Unpacker):
     def compileCondition(self, env, source):
@@ -35,8 +51,8 @@ class DefaultUnpacker(Unpacker):
 
 
 
-# A LiteralUnpacker accepts an argument with a specific VALUE, usually an int or
-# string literal.
+# A LiteralUnpacker pattern-matches an argument against a specific LITERAL
+# VALUE, like an int, string or keyword.
 
 class LiteralUnpacker(Unpacker):
     def __init__(self, i, value):
@@ -57,15 +73,16 @@ class LiteralUnpacker(Unpacker):
 
 
 
-# A TypeUnpacker accepts an argument with a specific CLASS.
+# A TypeUnpacker pattern-matches a value using its CLASS.
 
 class TypeUnpacker(Unpacker):
     def __init__(self, i, arg, type):
         super(TypeUnpacker, self).__init__(i, arg)
-        self.type = js.Symbol(value=type.value)
+        self.type = type.value
 
     def compileCondition(self, env, source):
         f = env.find('js/is-type?')
+        type = env.find(self.type)
 
         return js.Operator(
             op = '.',
@@ -74,18 +91,14 @@ class TypeUnpacker(Unpacker):
                 args = [
                     f,
                     js.Index(list=env.find(source), index=self.i),
-                    self.type]),
+                    type]),
             right = js.Symbol(value='__value'))
 
-    def compileUnpack(self, env, source):
-        return [js.Operator(
-            op = '=',
-            left = self.arg,
-            right = js.Index(list=env.find(source), index=self.i))]
 
 
+# A RemainingUnpacker unpacks all the remaining arguments in the source list
+# into a single array.
 
-# A RemainingUnpacker packs all the remaining arguments into a single array.
 class RemainingUnpacker(Unpacker):
     def compileUnpack(self, env, source):
         return [js.Operator(

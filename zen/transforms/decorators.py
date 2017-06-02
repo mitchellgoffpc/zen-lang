@@ -1,7 +1,12 @@
 from zen.ast import *
 
+from zen.compile.js.util import isKeyword
+
 
 def resolveDecorators(node):
+    if node.__class__ is list:
+        raise
+
     if node.cls not in (List, Array, Map):
         return node
 
@@ -9,8 +14,13 @@ def resolveDecorators(node):
     while i < len(node.values):
         child = node.values[i]
 
-        if child.cls is Operator and child.value in decorators:
-            node = decorators[child.value](node, i)
+        try:
+            if child.cls is Operator and child.value in decorators:
+                node = decorators[child.value](node, i)
+        except:
+            for child in node.values:
+                print child
+            raise
 
         i += 1
 
@@ -18,12 +28,12 @@ def resolveDecorators(node):
         return List(None, values=[resolveDecorators(child) for child in node.values])
     elif node.cls is Array:
         return List(None, values=(
-            [Symbol(None, value='array')] +
+            [Symbol(None, value='Array')] +
             [resolveDecorators(child) for child in node.values]))
     elif node.cls is Map:
-        return List(None, values=(
-            [Symbol(None, value='map')] +
-            [resolveDecorators(child) for child in node.values]))
+        children = [resolveDecorators(child) for child in node.values]
+        children = [List(None, values=[x]) if isKeyword(x) else x for x in children]
+        return List(None, values=[Symbol(None, value='Map')] + children)
 
 
 
@@ -45,15 +55,15 @@ def keyword(node, i):
 def escape(node, i):
     return prefix(node, i, 'escape')
 
-def special(node):
+def special(node, i):
     if i >= len(node.values) - 1:
         raise Exception("Invalid decorator")
 
     op = node.values[i + 1]
     if op.cls is Map:
-        return substitute(node, i, i+2, List(None, values=[
-            Symbol(None, value='set'),
-            node.values[i + 1].values]))
+        return substitute(node, i, i+2, List(None, values=(
+            [Symbol(None, value='Set')] +
+            node.values[i + 1].values)))
 
     elif op.cls is String:
         return substitute(node, i, i+2, List(None, values=[

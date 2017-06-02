@@ -1,7 +1,35 @@
 (import js)
 
-(operator == (x y)
-    (js/eq x.__value y.__value))
 
-(operator != (x y)
-    (js/neq x.__value y.__value))
+;; This is where where we define most of Zen's operators! At this point in the
+;; compilation, any infix operators in the Zen AST have been shunted by
+;; precedence and turned into regular old function calls, so all we have to do
+;; now is define the operators themselves. Most of the built-in Zen operators
+;; compile directly into JavaScript primitives, but some operators are actually
+;; macros that rearrange the Zen AST before it gets compiled. If you want to
+;; check out these special macro-operators, head over to library/core/macros.zen.
+
+(def-operator == (x y)
+    (js/eq (js/dot x __value) (js/dot y __value)))
+
+(def-operator != (x y)
+    (js/neq (js/dot x __value) (js/dot y __value)))
+
+(def-operator && (x y)
+    (js/and (js/dot x __value) (js/dot y __value)))
+
+(def-operator || (x y)
+    (js/or (js/dot x __value) (js/dot y __value)))
+
+
+(def-operator + (x y)
+    (js/add (js/dot x __value) (js/dot y __value)))
+
+(def-operator - (x y)
+    (js/sub (js/dot x __value) (js/dot y __value)))
+
+(def-operator * (x y)
+    (js/mul (js/dot x __value) (js/dot y __value)))
+
+(def-operator / (x y)
+    (js/div (js/dot x __value) (js/dot y __value)))

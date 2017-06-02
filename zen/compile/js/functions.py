@@ -6,14 +6,10 @@ from zen.compile.js.environment import *
 from zen.compile.js.unpackers import *
 from zen.compile.js.util import *
 
-from zen.library.macros.core import *
 
-
-# `lambda` compiler
-
-# A lambda is a CONDITIONAL FUNCTION. Like any other function, it can set
-# requirements that its arguments must meet, and if these requirements
-# aren't met, the function will throw an error.
+# A `lambda` is a CONDITIONAL FUNCTION, which means it can place restrictions
+# on the values and types of its arguments. meet. If these conditions aren't
+# met, the function will throw an error.
 
 def compileLambda(node, env):
     if len(node.values) < 3:
@@ -22,103 +18,64 @@ def compileLambda(node, env):
     args, body = node.values[1], node.values[2:]
     assert args.cls is ast.List
 
-    cf = compileConditionalFunction(env, args.values, body)
-    return JSObject('function', __call=cf), []
+    cf = compileConditionalFunction(FunctionEnvironment, env, args.values, body)
+    return [JSObject(
+        __call = cf,
+        __class = env.find('Function'))]
 
 
 # `def` compiler
 
 # `def` statements can stack on top of each other, allowing the CONDITIONAL
-# FUNCTION to test MANY different conditionals and select the first one whose
+# FUNCTION to test MANY different conditionals and dispatch the first one whose
 # conditions are met. When the compiler encounters a `def` statement, it
-# assigns it a special label in the environment so it can be found again later.
-# When we write another `def` statement later on, the compiler checks if the
-# given name already has a label in the environment; if so, we append
-# the conditional from the NEW `def` to the EXISTING conditional
-# function.
+# attaches the function's contents to its symbol so it can be found again later.
+# When we `def` another function later on, the Zen compiler checks if any
+# functions with that name are already defined; if so, it appends the
+# conditional from the NEW `def` to the EXISTING conditiona function.
 
 def compileFunction(node, env):
     name, args, body = node.values[1], node.values[2], node.values[3:]
-    assert name.cls is ast.Symbol
+    assert name.cls in (ast.Symbol, ast.Operator)
     assert args.cls is ast.List
 
-    if name.value in env.labels:
-        cf = env.labels[name.value]
+    try:
+        symbol = env.find(name.value)
+        cf = symbol.contents
         cond = compileConditional(FunctionEnvironment, cf.env, args.values, body)
         cf.conditionals.append(cond)
-        code = []
+        return []
 
-    else:
+    except ReferenceError:
         cf = compileConditionalFunction(FunctionEnvironment, env, args.values, body)
         symbol = env.create(name.value)
-        env.labels[name.value] = cf
-        code = [js.Operator(
+        symbol.contents = cf
+        return [js.Operator(
             op = '=',
-            left = js.Symbol(value=symbol),
-            right = JSObject('function', __call=cf))]
-
-    return js.Null(), code
-
-
-
-# `operator` compiler
-
-def compileOperator(node, env):
-    if len(node.values) < 3:
-        raise ArgumentError('operator', len(node.values) - 1, 3, "...")
-
-    op, args, body = node.values[1], node.values[2], node.values[3:]
-    assert op.cls is ast.Operator
-    assert args.cls is ast.List
-
-    if op.value in env.labels:
-        cf = env.labels[op.value]
-        cond = compileConditional(FunctionEnvironment, cf.env, args.values, body)
-        cf.conditionals.append(cond)
-        code = []
-
-    else:
-        cf = compileConditionalFunction(FunctionEnvironment, env, args.values, body)
-        symbol = env.create(op.value)
-        env.labels[op.value] = cf
-
-        code = [js.Operator(
-            op = '=',
-            left = js.Symbol(value=symbol),
-            right = JSObject('function', __call=cf))]
-
-    return js.Null(), code
-
+            left = symbol,
+            right = JSObject(
+                __call = cf,
+                __class = env.find('Function')))]
 
 
 # `init` compiler
 
 def compileInit(node, env):
-    assert node.cls is List
+    assert node.cls is ast.List
     assert len(node.values) >= 3
-    assert node.values[1].cls is List
+    assert node.values[1].cls is ast.List
 
     args, body = node.values[1], node.values[2:]
 
-    if env.init:
-        cf = env.init
-        cond = compileConditional(InitEnvironment, cf.env, args.values, body, len(cf.args))
-        cf.conditionals.append(cond)
-
-    else:
-        env.init = compileConditionalFunction(
-            InitEnvironment, env, args.values, body, ['_self'])
-
-    return JSObject('function', __call=env.init)
-
+    return compileConditional(InitEnvironment, env, args.values, body, 1)
 
 
 # `def-method` compiler
 
 def compileMethod(node, env):
-    assert node.cls is List
+    assert node.cls is ast.List
     assert len(node.values) >= 3
-    assert node.values[1].cls is List
+    assert node.values[1].cls is ast.List
     assert len(node.values[1].values) > 0
 
     args, body = node.values[1], node.values[2:]
@@ -131,17 +88,9 @@ def compileMethod(node, env):
     args = [arg for arg in args.values
                 if not isKeyword(arg)]
 
-    if selector in env.labels:
-        cf = env.labels[selector]
-        cond = compileConditional(MethodEnvironment, cf.env, args, body, len(cf.args))
-        cf.conditionals.append(cond)
-        return None
-
-    else:
-        cf = compileConditionalFunction(
-            MethodEnvironment, env, args, body, ['_self'])
-        env.labels[selector] = cf
-        return (js.String(value=selector), cf)
+    cf = compileConditionalFunction(
+        MethodEnvironment, env, args, body, ['_self'])
+    return js.String(value=selector), cf
 
 
 
@@ -157,26 +106,23 @@ def compileConditionalFunction(EnvCls, env, args, body, function_args = []):
 
 
 def compileConditional(EnvCls, env, args, body, start = 0):
-    assert env.__class__ is not ClassEnvironment
-
     unpackers = getUnpackers(args, start)
     source = 'js/arguments'
 
-    symbols = [x.symbol(env) for x in unpackers]
-    cond_env = EnvCls(env, {x:y for x, y in symbols})
+    cond_env = EnvCls(env)
     conditions = [x.compileCondition(env, source) for x in unpackers]
     unpacked = [y for x in unpackers
                   for y in x.compileUnpack(cond_env, source)]
 
     # Compile the body
-    do_expr = ast.List(None, values=[ast.Symbol(None, value='do')] + body)
-    retexpr, code = compileExpression(do_expr, cond_env)
-    body = unpacked + code + [js.Return(value=retexpr)]
+    code = [x for expr in body
+              for x in compileExpression(expr, cond_env)]
+    value = code.pop()
 
     return js.Conditional(
         env = cond_env,
         test = joinConditions(conditions),
-        body = body)
+        body = unpacked + code + [js.Return(value=value)])
 
 
 

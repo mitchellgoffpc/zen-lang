@@ -1,0 +1,132 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{array}
+\usepackage{easytable}
+\usepackage{subcaption}
+
+\lstset{tabsize=4}
+\lstset{basicstyle=\ttfamily}
+
+\title{Zen}
+\author{Mitchell D. Goff}
+
+\begin{document}
+
+\maketitle
+\pagenumbering{gobble}
+\newpage
+\pagenumbering{arabic}
+
+
+
+% Section 1 - Introduction
+\section{Project Overview}
+Zen is a new programming language for the web. It aims to be simple, readable, and concise, and it allows developers to write all their code in a single language. The Zen compiler, which I am submitting for consideration in Dartmouth's Kemeny Prize, transforms Zen expressions into JavaScript code, which can be executed by either an ES5-compatible web browser or a JavaScript runtime like Node.js. The compiler is currently written in a mixture of Python and Zen; however, I intend to port the remaining Python code to Zen once the language is capable of bootstrapping itself.
+
+The claim that Zen might allow a web developer to write all their code in just one language is, in my mind, a rather astounding one. Web developers today use an astonishing array of languages and data formats, partly because these different languages are best suited to different things. For back-end work, a developer might use PHP, Python, Ruby, or JavaScript; for front-end work, they must use what web browsers will support (mostly HTML, CSS, and JavaScript); and for configuration files and project data, they might opt to use XML, JSON, or perhaps YAML.
+
+Besides whatever problems these languages suffer from individually, they all share the subtle flaw of having been invented independently of each other. Real-life usage often forces languages to interact in complex and awkward ways, and these languages, not having been designed to work seamlessly together, suffer as a result. Front-end work tends to be especially problematic in this regard. When building a web app, a developer must write code that will load data from a remote API, use that data to generate complex HTML components, and display those HTML components to the user -- which means dealing with HTML, CSS, and whatever data format the API uses (perhaps XML or JSON).
+
+
+
+
+
+% Section 2 : Instructions
+\section{User Instructions}
+
+This section provides a brief overview of the Zen programming language. I realize that many of the judges for the Kemeny Prize will already be familiar with the concepts presented in this section, but for the sake of any non-technical readers, I'll do my best to explain the language as simply and clearly as possible, starting from the very beginning.
+
+
+% Section 2.1 : "hello, world"
+\subsection{``hello, world''}
+``The only way to learn a new programming language is by writing programs in it.'' That's what Kernighan and Ritchie say, anyways, and the inventors of C would probably know; so let's jump right in with a ``hello world'' program. In Zen, this requires only one line of code, and looks something like this:
+
+\begin{lstlisting}
+(print "Hello, world!")
+\end{lstlisting}
+
+This line of code is a full-fledged Zen program -- in fact, if we place it in a file, we can use the Zen compiler to build and run it. To see how this works, let's name our file \lstinline{hello-world.zen}, just as an example. To run it, we open a shell and type in the following command:
+
+\begin{lstlisting}
+>> zen run hello-world.zen
+Hello, world!
+\end{lstlisting}
+
+So far, so good! Before we go any further, though, let's examine our ``hello world'' program a bit more closely. Readers who have spent some time programming in a language like LISP will already be familiar with the syntax that Zen uses, but if you're accustomed to writing in a language like C or Java or Python, and our program looks a little strange to you, not to worry! All we are doing here is calling a function -- namely, the \lstinline{print} function -- and passing it the string ``Hello, world!'' as an argument.
+
+Of course, calling a function is exactly the sort of thing you might do in C or Java or Python all the time -- but in these languages, and a good many others, you put the function's name {\em before} the parentheses rather than {\em inside} them; so a ``hello world'' program might look something more like \lstinline{print("Hello, world!")}. The Zen way of writing programs, where you put the function {\em inside} the parentheses, may seem strange at first to some readers, but as we'll see later on, this syntax lets us do some pretty nifty things that aren't possible in most other languages.
+
+
+% Section 2.2 : Functions
+\subsection{Functions}
+Passing around one argument at a time is fun and all, but why stop there? As a matter of fact, the \lstinline{print} function will print out as many strings as we care to pass it. We've already done ``hello world'', so this time let's print something a little more zen:
+
+\begin{lstlisting}
+>>> (print "words" "cannot" "open" "another's" "mind.")
+words cannot open another's mind.
+\end{lstlisting}
+
+That's pretty Zen, I'd say! We gave \lstinline{print} a whole bunch of strings, and it joined them all together. The arguments are just separated with a space -- Zen ignores commas, so putting them between your arguments won't do anything.
+
+Now, let's try making a function of our own. In Zen, the way to define a function is like this:
+
+\begin{lstlisting}
+(def print-twice (x)
+	(print x)
+	(print x))
+	
+>>> (print-twice "hungry hungry hippos")
+hungry hungry hippos
+hungry hungry hippos
+\end{lstlisting}
+
+Something funny is going on with all these parentheses: we're calling \lstinline{def} just as if it were a function! It isn't, though -- it's one of Zen's special primitives. These primitives can do some very fancy things, but \lstinline{def} is pretty straightforward; we give it the function's name, then its arguments, then its code. (Whitespace doesn't have any special meaning in Zen, so you can indent your code however you prefer.)
+
+
+% Section 2.3 : Math
+\subsection{Operators}
+Now that we've got functions out of the way, let's have some fun with numbers!
+
+\begin{lstlisting}
+>>> 2 + 3
+5
+>>> 5 * 5 * 5
+125
+>>> (7 - 4) / 1.2
+2.5
+\end{lstlisting}
+
+This is pretty self-explanatory. Zen uses the standard arithmetic operators and obeys the usual precedence rules, and we can use parentheses to group terms together. Operators are evaluated before function calls, so although it might look in the third example as though we're trying to call the \lstinline{7} (with \lstinline{-} and \lstinline{4} as arguments), we actually evaluate the operator first (getting us \lstinline{3}) and then call the \lstinline{3} with no arguments. In Zen, all values return themselves when called with no arguments, so \lstinline{(((("a rose"))))} has exactly the same value as \lstinline{"a rose"} no matter how parentheses we surround it with.
+
+One other little pitfall to watch out for is that Zen allows you to use a few special symbols (\lstinline{+, -, *, /, _,} and \lstinline{?}) in your variable names, so you can call your functions things like \lstinline{print-twice} or \lstinline{*alert*} or \lstinline{empty?}. This is very nice, but we have to be careful to put spaces around operators that use these symbols -- \lstinline{x+y} is a valid name in Zen, so if we want to add \lstinline{x} and \lstinline{y} together, we must write \lstinline{x + y} or the compiler will get confused and complain that it doesn't know anything about the variable \lstinline{x+y}.
+
+\begin{lstlisting}
+(def double (x)
+	(x * 2))
+	
+>>> (double 2)
+4
+\end{lstlisting}
+
+
+% Subsection 2.4
+\subsection{Pattern Matching}
+A lot of times, when we're assigning values to things in a programming language
+
+
+
+% Section 3
+\section{Technical Description}
+
+This section will briefly describe the internals of the Zen compiler. Most of the modules are well documented with comments that explain the individual classes and functions, so this section will focus on just the most important modules and how they fit together.
+
+
+
+% Section 4 - Evaluation
+\section{Evaluation}
+
+
+
+
+\end{document}

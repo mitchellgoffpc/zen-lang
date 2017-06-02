@@ -28,9 +28,17 @@ class Node(object):
 
 class Symbol(Node): pass
 class Operator(Node): pass
+
+class Nil(Node):
+    def __str__(self):
+        return 'nil'
+
+class Boolean(Node):
+    def __str__(self):
+        return 'true' if self.value else 'false'
+
 class Integer(Node): pass
 class Float(Node): pass
-class Boolean(Node): pass
 
 class String(Node):
     def __str__(self):

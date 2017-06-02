@@ -1,20 +1,16 @@
-"""
-Transforms the given source code into a list of tokens
-"""
-
 from zen.parse.errors import *
 from zen.parse.source import *
 
 
 # Operator list:
 operators = (
-    ';', '$', '%', '&', '*', '+', '-', '/', '<', '=', '>',
-    '.', ':', ',', "'",  '!', '?', '@', '^', '|', '~')
+    ';', '%', '&', '*', '+', '-', '/', '<', '=', '>',
+    '.', ':', ',', "'",  '!', '?', '@', '#', '$', '^', '|', '~')
 
 butterflies = ('_', '+', '-', '*', '/', '?')
 
 
-# TokenType enum
+# TokenType: An Enum that describes the TYPE of a lexical token
 class TokenType:
     EOF = 'EOF'
     PAREN_L = '('
@@ -30,7 +26,7 @@ class TokenType:
     OPERATOR = 'Operator'
 
 
-# Token class
+# Token: A lexical token
 class Token:
     def __init__(self, type, start, end, value=None):
         self.type = type
@@ -45,7 +41,7 @@ class Token:
             return "<Token: {}, {}>".format(self.type, self.value)
 
 
-# Lexer class
+# Lexer: A Lexer lazily transforms a string of Zen code into a list of Tokens
 class Lexer(Source):
     def __init__(self, body):
         super(Lexer, self).__init__(body)

@@ -1,6 +1,6 @@
 from zen.ast import *
 
-skips = ['operator', 'def-macro']
+skips = ['def-operator', 'def-macro']
 
 operators = {
     '|': (2, 'right'),

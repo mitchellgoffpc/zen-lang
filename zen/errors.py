@@ -1,6 +1,4 @@
-"""
-This file contains some basic error classes thrown by the compiler.
-"""
+# ZenError: The base class for all errors thrown by the Zen compiler
 
 class ZenError(Exception):
     def __init__(self, message):

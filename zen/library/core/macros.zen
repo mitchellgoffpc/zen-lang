@@ -1,0 +1,17 @@
+;; First we define some really important macros!
+
+(def-macro if (cond x y)
+    '(js/if-else (~cond :bool) ~x ~y))
+
+
+;; Then we define some special macro-operators which cannot be represented as
+;; regular functions (see library/core/operators.zen for details).
+
+(def-macro . (x y)
+    '(js/index (js/dot ~x __properties) ~y))
+
+(def-macro | (x y)
+    '((~x) ~y))
+
+(def-macro -> (x y)
+    '(lambda (~x) ~y))

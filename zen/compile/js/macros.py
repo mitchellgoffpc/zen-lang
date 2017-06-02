@@ -9,12 +9,11 @@ from zen.compile.js.compile import *
 from zen.compile.js.environment import *
 from zen.compile.js.linker import *
 from zen.compile.js.literals import *
-from zen.library.macros.core import *
+from zen.compile.js.util import *
 from zen.parse.parse import Parser
 
 from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
-from zen.transforms.macros import resolveMacros
 
 
 # Compile a def-macro statement
@@ -25,14 +24,15 @@ def compileMacro(node, env):
 
     name = node.values[1].value
     args = node.values[2]
-    macro_env = FunctionEnvironment(env, {x.value:x.value for x in args.values})
-    retexpr, code = compileExpression(node.values[3], macro_env)
+    macro_env = FunctionEnvironment(env, [x.value for x in args.values])
+    code = compileExpression(node.values[3], macro_env)
+    retexpr = code.pop()
     body = code + [js.Return(value=retexpr)]
 
-    js_args = [js.Symbol(value=x.value) for x in args.values]
+    js_args = [macro_env.find(x.value) for x in args.values]
     env.outermost().createMacro(name, args, js.Function(env=macro_env, args=js_args, body=body))
 
-    return js.Null(), []
+    return []
 
 
 
@@ -41,7 +41,7 @@ def executeMacro(node, env, macro):
     args, f = macro
     quoted = [quote(x, env)[0] for x in node.values[1:]]
 
-    code = [
+    macro_code = [
         js.Var(value='__macro'),
         js.Operator(
             op = '=',
@@ -54,18 +54,18 @@ def executeMacro(node, env, macro):
                 args = quoted)])]
 
     main = os.path.join(os.path.dirname(__file__), '../../')
-    core = os.path.join(main, 'library/js/core.js')
+    linker = env.outermost().module.linker
 
-    with open(core, 'r') as prefix:
-        linker = Linker(None, main)
-        linker.compile()
+    code = linker.write()
+    code += ''.join('{};\n'.format(x.write()) for x in macro_code)
 
-        code = linker.write() + ''.join(
-            '{};\n'.format(x.write()) for x in code)
-
+    # Dump the macro code to a place where we can easily find it for
+    # debugging purposes
     with open('/Users/mitchell/Desktop/macro.js', 'w+') as dump:
         dump.write(code)
 
+    # Write the macro code to a temporary file, then run the macro by calling
+    # node.js as a subprocess and having it print the macro's result to stdout.
     with tempfile.NamedTemporaryFile() as temp:
         temp.write(code)
         temp.flush()
@@ -85,8 +85,7 @@ def executeMacro(node, env, macro):
     # AST transforms
     transforms = [
         resolveDecorators,
-        resolveFixity,
-        resolveMacros]
+        resolveFixity]
 
     for transform in transforms:
         node = transform(node)

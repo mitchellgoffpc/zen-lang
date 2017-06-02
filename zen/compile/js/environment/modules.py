@@ -7,54 +7,57 @@ from zen.compile.js.environment.base import *
 from zen.compile.js.environment.classes import *
 
 
-# Root environment
-class ModuleEnvironment(Environment):
+# ModuleEnvironment: A ModuleEnvironment's job is to manage the symbols that are
+# imported and exported from a single Zen module.
+
+class ModuleEnvironment(BaseEnvironment):
     def __init__(self, module):
         super(ModuleEnvironment, self).__init__(None)
         self.module = module
         self.imports = {}
-        self.macros = {}
-        self.labels = {}
+
+    # .createMacro: Register a new macro with the given name and details.
+
+    def createMacro(self, name, args, body):
+        self.symbols[name] = js.Macro(value=name, macro=(args, body))
+
+
+    # .createImport: Import symbols from the module at the given namespace.
 
     def createImport(self, target, ns, alias=None):
         module = self.module.linker.getModule(ns)
 
+        # If a target symbol is defined, import just that one symbol
         if target:
             if target in module.exports():
                 self.imports[alias or target] = module.exports()[target]
-            elif target in module.macros():
-                self.macros[alias or target] = module.macros()[target]
             else:
                 raise CompileError('Module `{}` has no symbol `{}`'.format(ns, target))
 
+        # Otherwise, copy all of the module's exports into our imports
         else:
             for target, js_symbol in module.exports().items():
-                symbol = '{}/{}'.format(alias or ns, target)
+                symbol = '{}/{}'.format(ns, target)
                 self.imports[symbol] = js_symbol
-            for target, macro in module.macros().items():
-                symbol = '{}/{}'.format(alias or ns, target)
-                self.macros[symbol] = macro
 
-    def createMacro(self, name, args, body):
-        self.macros[name] = (args, body)
+
+    # .find: A ModuleEnvironment is always a top-level environment, so it has
+    # no .outer property. If we can't find the symbol in our imports or exports,
+    # or in the Zen Prelude, we need to raise a compile error.
 
     def find(self, symbol):
         if symbol in self.symbols:
-            return js.Symbol(value=self.symbols[symbol])
+            return self.symbols[symbol]
         elif symbol in self.imports:
-            return js.Symbol(value=self.imports[symbol])
-        elif symbol in self.module.linker.prefix:
-            return js.Symbol(value=self.module.linker.prefix[symbol])
-
-        elif symbol in self.macros:
-            return js.Macro(value=symbol, macro=self.macros[symbol])
-        elif symbol in self.module.linker.macros:
-            return js.Macro(value=symbol, macro=self.module.linker.macros[symbol])
+            return self.imports[symbol]
+        elif symbol in self.module.linker.prelude_symbols:
+            return self.module.linker.prelude_symbols[symbol]
         else:
-            raise CompileError('Symbol `{}` is undefined in the current environment'.format(symbol))
+            raise ReferenceError(symbol)
+
+
+    # .outermost: We're already in the module-level environment, so just return
+    # self.
 
     def outermost(self):
         return self
-
-    def compile(self):
-        return [js.Var(value=y) for x, y in self.symbols.items()]

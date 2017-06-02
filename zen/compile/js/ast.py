@@ -1,9 +1,7 @@
-"""
-Provides all the classes that will make up the AST for the javascript program
-"""
-
-from zen.transforms.case import recase
-
+# Node: Node is the base class for all of the different types of JavaScript
+# AST nodes. Like zen.ast.Node, its __init__ method copies any keyword args we
+# provide it with to the Node's __dict__, which lets us access those properties
+# more easily later on.
 
 class Node(object):
     def __init__(self, **kwargs):
@@ -24,13 +22,15 @@ class Node(object):
 
 
 
-# Basic node types
+# First we'll define some of JavaScript's basic AST node types, like numbers,
+# symbols, and literals.
+
 class Integer(Node): pass
 class Float(Node): pass
 
 class Symbol(Node):
     def write(self, indent=0):
-        return recase(self.value)
+        return self.value
 
 class Boolean(Node):
     def write(self, indent=0):
@@ -58,7 +58,9 @@ class Object(Node):
 
 
 
-# Complex node types
+# Then we'll define some slightly more comple node types, for things Like
+# operators and function calls.
+
 class Var(Node):
     def write(self, indent=0):
         return 'var {}'.format(self.value)
@@ -131,10 +133,9 @@ class While(Node):
 
 
 
-# Alternative node types
-
-# These classes are for AST nodes that aren't real javascript AST nodes, but
-# are still useful for various reasons.
+# These classes are for 'virtual' AST nodes; they don't really correspond to
+# any particular type of JavaScript AST node, but they provide some useful
+# building blocks for constructing certain complex types of expressions.
 
 class Macro(Node):
     pass
@@ -180,3 +181,50 @@ class MultiIfElse(Node):
                 tabs)
 
         return result
+
+
+class Class(Node):
+    def write(self, indent=0):
+        from zen.compile.js.environment import (
+            FunctionEnvironment,
+            MethodEnvironment)
+
+        from zen.compile.js.util import JSObject
+
+        dummy_env = FunctionEnvironment(self.env)
+        create_env = MethodEnvironment(dummy_env)
+
+        f = Function(env=dummy_env, args=[], body=[
+            Var(value='__cls'),
+            Var(value='__create'),
+
+            Operator(
+                op = '=',
+                left = Symbol(value='__cls'),
+                right = JSObject(
+                    __name = String(value=self.name),
+                    __init = ConditionalFunction(
+                        env = self.env,
+                        args = [Symbol(value='_self')],
+                        conditionals = self.inits) if self.inits else Null(),
+                    __methods = Object(values=self.methods))),
+
+            Operator(
+                op = '=',
+                left = Symbol(value='__create'),
+                right = Function(env=create_env, args=[], body=[Return(
+                    value = JSObject(
+                        __class = Symbol(value='__cls'),
+                        __properties = Object(values=[])))])),
+
+            Operator(
+                op = '=',
+                left = Operator(
+                    op = '.',
+                    left = Symbol(value='__cls'),
+                    right = Symbol(value='__create')),
+                right = Symbol(value='__create')),
+
+            Return(value=Symbol(value='__cls'))])
+
+        return Call(f=f, args=[]).write(indent)

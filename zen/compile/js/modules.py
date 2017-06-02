@@ -1,4 +1,5 @@
 import os
+import re
 
 import zen.ast as ast
 import zen.compile.js.ast as js
@@ -9,71 +10,68 @@ from zen.compile.js.errors import *
 from zen.compile.js.util import *
 from zen.parse.parse import Parser
 
-from zen.library.macros.core import *
-
 from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
-from zen.transforms.macros import resolveMacros
 
 
-class Module(object):
+# A BaseModule object represents a single Zen module, and contains most of the
+# methods we need to compile Zen code into JavaScript. We initialize a
+# BaseModule with a string containing Zen code, and the .compile method
+# transforms this string into a list of JavaScript AST nodes. By a happy
+# coindence, these new AST nodes know how to render themselves into strings,
+# so the .write method just joins them all together and returns the module's
+# entire JavaScript code.
+
+class BaseModule(object):
     def __init__(self, linker, source):
         self.linker = linker
         self.source = source
         self.env = ModuleEnvironment(self)
         self.ns = None
 
+
+    # Return a dict of all the symbols and macros that are defined in
+    # this module
     def exports(self):
         return self.env.symbols
-
-    def macros(self):
-        return self.env.macros
-
-    def load(self):
-        with open(self.source, 'r') as code:
-            return code.read()
-
-
-    # Populate this module with the exports of another module
-    def populate(self, module):
-        for target, symbol in module.exports().items():
-            self.env.imports[target] = symbol
 
 
     # Read, parse, and compile a Zen source file
     def compile(self):
-        source = self.load()
-        parser = Parser(source)
+        # First we parse the Zen source code into a list of Zen AST nodes
+        parser = Parser(self.source)
         nodes = parser.parse()
 
-        # AST transforms
+        # Then we do some AST transforms
         transforms = [
             resolveDecorators,
-            resolveFixity,
-            resolveMacros]
+            resolveFixity]
 
         for transform in transforms:
             nodes = map(transform, nodes)
 
         nodes = filter(None, nodes)
 
-        # Compile into Javascript code
+        # Then we compile our Zen ASTs into a list of Javascript ASTs
         code = self.env.compile()
-        code += [x for node in nodes for x in self.compileNode(node)]
+        code += [x for node in nodes
+                   for x in self.compileNode(node)]
+
+        # Then we filter out the nulls, and we're done!
         self.code = filter(lambda x: x.cls != js.Null, code)
 
 
-    # Transform a single Zen AST node into a JavaScript AST node
+    # Transform a single Zen AST node into a list of JavaScript AST nodes
     def compileNode(self, node):
         try:
-            expr, code = compileExpression(node, self.env)
-            return code + [expr]
+            return compileExpression(node, self.env)
         except CompileError as e:
-            e.module = self
+            if not hasattr(e, 'module'):
+                e.module = self
             raise
 
 
-    # Write out the compiled Javascript code as text
+    # Render all of the JavaScript AST nodes in this module into a single string
     def write(self):
         return ''.join(
             '{};\n'.format(x.write())
@@ -81,12 +79,21 @@ class Module(object):
 
 
 
-# A dummy module that allows us to access built-in js functionality
-class JSModule(Module):
+# A BaseJSModule is a module that contains JavaScript code instead of Zen
+# code. This allows us to link raw JavaScript code into a project as necessary.
+
+# Sometimes, when linking raw JavaScript into our Zen code, we need to
+# reference objects which are defined in Zen modules. The Zen compiler does
+# not (yet) let us import any Zen module we want into our JavaScript code, but
+# it does let us reference any symbol in the Zen Prelude, which does the trick
+# for now. See .write() for details.
+
+# TODO: Make it possible to import symbols from other modules
+
+class BaseJSModule(BaseModule):
     def __init__(self, linker, source, symbols={}):
-        self.linker = linker
-        self.source = source
-        self.symbols = symbols
+        super(BaseJSModule, self).__init__(linker, source)
+        self.symbols = {x: js.Symbol(value=y) for x, y in symbols.items()}
 
     def exports(self):
         return self.symbols
@@ -100,58 +107,47 @@ class JSModule(Module):
     def compile(self):
         pass
 
+    # The Zen Prelude begins with some raw JavaScript, and this JavaScript code
+    # needs access to some symbols which aren't defined until later on in the
+    # Prelude (in particular, Bool, Int & String). For the sake of simplicity,
+    # we just wait until the rendering phase to link these symbols into the
+    # code. Then we scan the source file and replace all instances of
+    # `#{<symbol>}` with the corresponding symbol from the Prelude.
+
     def write(self):
-        if self.source:
-            return self.load()
-        else:
-            return ''
+        source = self.source
+
+        for match in re.finditer(r"#\{(.*?)\}", source):
+            symbol = match.group(1)
+            js_symbol = self.linker.prelude_symbols.get(symbol)
+
+            if js_symbol and js_symbol.cls is js.Symbol:
+                source = re.sub(
+                    "#{{{}}}".format(symbol),
+                    js_symbol.write(),
+                    source)
+            else:
+                raise CompileError("Zen symbol `{}` is undefined".format(symbol))
+
+        return source
 
 
 
-# Compile an import statement
-def compileImport(node, env):
-    args = node.values[1:]
-    imports = []
-    i = 0
+# The FileModule mixin is a subclass of BaseModule that uses a file
+# as its source instead of a string.
 
-    while i < len(args) and not isKeyword(args[i]):
-        assert args[i].cls is ast.Symbol
-        imports.append(args[i].value)
-        i += 1
+class FileModule(object):
+    def __init__(self, linker, source, **kwargs):
+        source = self.load(source) if source else ''
+        super(FileModule, self).__init__(linker, source, **kwargs)
 
-    keywords = getKeywords(args[i:])
-
-
-    # import :as
-    if 'as' in keywords:
-        assert len(imports) == 1
-        assert keywords['as'].cls is ast.Symbol
-
-        alias = keywords['as'].value
-    else:
-        alias = None
+    def load(self, source):
+        with open(source, 'r') as code:
+            return code.read()
 
 
-    # import :from
-    if 'from' in keywords:
-        assert keywords['from'].cls is ast.Symbol
+# The Module and JSModule classes are just subclasses of BaseModule with the
+# FileModule mixin.
 
-        if alias:
-            assert len(imports) == 1
-
-        for target in imports:
-            env.outermost().createImport(
-                target = target,
-                ns = keywords['from'].value,
-                alias = alias)
-
-    # import
-    else:
-        assert len(imports) == 1
-
-        env.outermost().createImport(
-            target = None,
-            ns = imports[0],
-            alias = alias)
-
-    return js.Null(), []
+class Module(FileModule, BaseModule): pass
+class JSModule(FileModule, BaseJSModule): pass

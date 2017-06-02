@@ -1,7 +1,0 @@
-(import js)
-
-(def not (x)
-    (if x false true))
-
-(def call (x)
-    (js/call x))

@@ -1,12 +1,11 @@
-"""
-Transforms the given source code into an abstract syntax tree
-"""
-
 from zen.ast import *
 from zen.parse.errors import SyntaxError
 from zen.parse.lex import Lexer
 from zen.parse.lex import TokenType
 
+
+# Parser: The Parser class transforms a string of Zen code into a list of Zen
+# abstract syntax tree nodes.
 
 class Parser:
     def __init__(self, source):
@@ -27,7 +26,7 @@ class Parser:
         if token.value in ('true', 'false'):
             return Boolean(self, value=(token.value == 'true'), advance=True)
         elif token.value == 'nil':
-            return Nil(self, value=None, advance=True)
+            return Nil(self, advance=True)
         else:
             return Symbol(self, value=token.value, advance=True)
 

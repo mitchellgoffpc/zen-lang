@@ -1,0 +1,33 @@
+(import js)
+
+
+(def not (x)
+    (if x false true))
+
+(def call (x)
+    (js/call x))
+
+(def print (x)
+    (js/log (str x)))
+
+
+;;; Just some sketches
+(def factorial (0) 1)
+(def factorial (1) 1)
+(def factorial (n) (factorial (n - 1) + factorial (n - 2)))
+
+(def-case factorial (n)
+    (n = 0) -> 1
+    (n = 1) -> 1
+    :otherwise -> (factorial (n - 1) + factorial (n - 2)))
+
+(result := (case
+    (x = 0) -> 1
+    (x = 1) -> 1
+    :otherwise -> some-value
+    :where (x := 5 + 5)))
+
+(def head ()
+    (error "You can't call head on an empty list, dummy!"))
+(def head (x & _) x)
+;;;
