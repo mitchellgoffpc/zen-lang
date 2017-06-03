@@ -16,7 +16,7 @@ from zen.transforms.decorators import resolveDecorators
 from zen.transforms.infix import resolveFixity
 
 
-# Compile a def-macro statement
+# Compile a def-macro statement into a js.Macro
 def compileMacro(node, env):
     assert len(node.values) == 4
     assert node.values[1].cls in (ast.Symbol, ast.Operator)
@@ -35,8 +35,7 @@ def compileMacro(node, env):
     return []
 
 
-
-# Execute the given macro
+# Execute a macro, parse the output, and compile it into JavaScript.
 def executeMacro(node, env, macro):
     args, f = macro
     quoted = [quote(x, env)[0] for x in node.values[1:]]
@@ -65,7 +64,7 @@ def executeMacro(node, env, macro):
         dump.write(code)
 
     # Write the macro code to a temporary file, then run the macro by calling
-    # node.js as a subprocess and having it print the macro's result to stdout.
+    # Node.js as a subprocess and having it print the macro's result to stdout.
     with tempfile.NamedTemporaryFile() as temp:
         temp.write(code)
         temp.flush()
