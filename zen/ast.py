@@ -1,11 +1,10 @@
-"""
-Provides all the classes that will make up the AST for a program
-"""
+# This module contains the building blocks for a Zen AST
 
 class Location(object):
     def __init__(self, start, end, source=None):
         self.start, self.end, self.source = start, end, source
 
+# Node is the base class for all the different types of Zen AST nodes.
 class Node(object):
     def __init__(self, parser, **kwargs):
         if parser:

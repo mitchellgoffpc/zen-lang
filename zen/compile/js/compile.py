@@ -5,7 +5,11 @@ from zen.compile.js.errors import *
 from zen.compile.js.util import *
 
 
-# Compile a Zen expression
+# compileExpression: This function is the top level of the compiler chain. It
+# accepts a Zen AST node of any type (a Zen expression), plus an environment
+# object, and compiles that node into a stack of JavaScript AST nodes (JS-nodes).
+# The JS-node which represents the expression's value is stored on top of the stack.
+
 def compileExpression(node, env):
     if node.cls is ast.List:
         return compileFunctionCall(node, env)
@@ -41,40 +45,47 @@ def compileExpression(node, env):
 
 
 
-# Compile a function call (i.e. an unquoted list)
+# compileFunctionCall: If compileExpression finds an unquoted list, it
+# dispatches the node to compileFunctionCall.
+
 def compileFunctionCall(node, env):
     from zen.compile.js.primitives import primitives
     from zen.compile.js.macros import executeMacro
 
+    # If the list is empty, we treat it as a literal for an empty tuple.
     if len(node.values) == 0:
         return [JSObject(
             __value = js.Array(values=[]),
             __class = env.find('Tuple'))]
+
+    # If the list has only one member, we compile that member and return it.
     if len(node.values) == 1:
         return compileExpression(node.values[0], env)
 
+    # Otherwise, this is a function call. The expression at the head of the list
+    # is the function we want to call, so store that expression.
     f = node.values[0]
 
-    # First we check if `f` is a primitive
+    # First we check if f is a primitive.
     if f.cls in (ast.Operator, ast.Symbol) and f.value in primitives:
         return primitives[f.value](node, env)
 
-    # Otherwise, we need to evaluate `f` and figure out what it is
+    # Otherwise, we need to compile f and figure out what it is.
     f_code = compileExpression(f, env)
     f = f_code.pop()
 
-    # If `f` is a macro, execute it straight away
+    # If f is a macro, execute it straight away.
     if f.cls is js.Macro:
         return executeMacro(node, env, f.macro)
 
-    # If `f` isn't a macro, we evaluate each of the arguments and pass them to
-    # `f`. However, function and method calls are handled slightly differently:
+    # If f isn't a macro, we evaluate each of the arguments and pass them to
+    # f. However, function and method calls are handled slightly differently:
 
     # - Methods
-    #     If `f`'s first argument is a KEYWORD, then we make a METHOD call. To
-    #     make one of these, we must first construct a selector from `f`'s
+    #     If f's first argument is a KEYWORD, then we make a METHOD call. To
+    #     make one of these, we must first construct a selector from f's
     #     arguments, then invoke `__dispatch_method`, which looks up the
-    #     selector in `f.__methods` and calls the appropriate javascript
+    #     selector in f.__methods and calls the appropriate javascript
     #     function.
 
     method_call = isKeyword(node.values[1])
@@ -105,9 +116,9 @@ def compileFunctionCall(node, env):
             args = [f, selector] + args)]
 
     # - Functions
-    #     If `f`'s first argument is NOT a KEYWORD, then we make a FUNCTION call
-    #     using `__dispatch`, which simply passes the arguments to `f.__call` or
-    #     `f.__init` if f is a Class.
+    #     If f's first argument is NOT a KEYWORD, then we make a FUNCTION call
+    #     using `__dispatch`, which passes the arguments to f.__call if f is
+    #     a function, or f.__init if f is a Class.
 
     else:
         for child in node.values[1:]:

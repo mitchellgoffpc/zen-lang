@@ -6,7 +6,7 @@ from zen.compile.js.modules import *
 
 # BaseLinker (Linker's parent class) is, in a sense, the top layer of the
 # Zen compiler. Its job is to compile the Zen Prelude and all its imports,
-# along with a bit of raw JavaScript code, into a single js file.
+# along with some raw JavaScript code, into a single js file.
 
 class BaseLinker(object):
     def __init__(self, main):

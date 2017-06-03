@@ -121,6 +121,23 @@ A lot of times, when we're assigning values to things in a programming language
 
 This section will briefly describe the internals of the Zen compiler. Most of the modules are well documented with comments that explain the individual classes and functions, so this section will focus on just the most important modules and how they fit together.
 
+Life for a Zen program begins with the Linker (\lstinline{zen/compile/js/linker.py}). The Linker's job is to compile a Zen module, along with the Zen Prelude and all of the module's imports, into a single executable JavaScript file. It does this in four stages: Parsing, AST transforms, compiling, and rendering.
+
+\subsection{Parsing}
+Parsers are fairly well-studied algorithms, and since the Zen parser is not especially complex, I will comment only briefly. Once the Linker has located and loaded the source code of the module being compiled, the code is passed as a string to the Lexer (\lstinline{zen/parse/lex.py}), which transforms it into a list of tokens. The Parser (\lstinline{zen/parse/parse.py}) then transforms this list of tokens into a list of abstract syntax tree (AST) nodes. The classes for these nodes can be found at \lstinline{zen/ast.py}.
+
+\subsection{AST Transforms}
+Before a module's code (now in Zen AST form) is compiled into JavaScript, we need to modify the AST a little bit. We do this by passing the AST through several mapping functions, each of which performs a particular transform on all of the AST nodes and their children by calling itself recursively. At the moment, the Zen compiler uses only two AST transforms, \lstinline{resolveDecorators} and \lstinline{resolveFixity}, which can be found (along with their documentation) at \lstinline{zen/transforms/decorators.py} and \lstinline{zen/transforms/infix.py}, respectively.
+
+\subsection{Compiling}
+The next task is to transform a module's code, still in Zen AST form, into a JavaScript AST. JavaScript's AST is quite a bit more complex than Zen's.
+
+The top-level function is parseExpression
+
+
+\subsection{Rendering}
+Finally, the linker needs to render everything into a single JavaScript file. To do this, it loops through all the modules it has compiled so far, in the same order it compiled them, and calls their \lstinline{.write()} methods. The module's \lstinline{.write()} method calls the \lstinline{.write()} method of each of its top-level JavaScript AST nodes, and they in turn call the \lstinline{.write()} methods of each of their component nodes. Using \lstinline{.write()}, the entire AST structure recursively renders itself into a single string of JavaScript code, which is passed back down the call stack to the linker. Once the linker has rendered every module, it joins them together and writes them to whatever output file the user has requested.
+
 
 
 % Section 4 - Evaluation
